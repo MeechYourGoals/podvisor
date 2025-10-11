@@ -53,7 +53,7 @@ const ContextProfileForm = ({ onProfileSelect, onAnalyze, onSkip, isAnalyzing }:
   }, [user]);
 
   const loadProfiles = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('user_context_profiles')
       .select('*')
       .eq('user_id', user?.id)
@@ -93,7 +93,7 @@ const ContextProfileForm = ({ onProfileSelect, onAnalyze, onSkip, isAnalyzing }:
       }
 
       try {
-        const { data: newProfile, error } = await supabase
+        const { data: newProfile, error } = await (supabase as any)
           .from('user_context_profiles')
           .insert({
             user_id: user.id,
