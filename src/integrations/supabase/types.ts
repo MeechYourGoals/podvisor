@@ -14,7 +14,389 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bookmark_folders: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          folder_name: string
+          icon: string | null
+          id: string
+          sort_order: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          folder_name: string
+          icon?: string | null
+          id?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          folder_name?: string
+          icon?: string | null
+          id?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      bookmarked_insights: {
+        Row: {
+          created_at: string | null
+          folder_id: string | null
+          id: string
+          insight_id: string | null
+          notes: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          folder_id?: string | null
+          id?: string
+          insight_id?: string | null
+          notes?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          folder_id?: string | null
+          id?: string
+          insight_id?: string | null
+          notes?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmarked_insights_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "bookmark_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmarked_insights_insight_id_fkey"
+            columns: ["insight_id"]
+            isOneToOne: false
+            referencedRelation: "insights"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookmarked_videos: {
+        Row: {
+          created_at: string | null
+          folder_id: string | null
+          id: string
+          notes: string | null
+          user_id: string | null
+          video_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          folder_id?: string | null
+          id?: string
+          notes?: string | null
+          user_id?: string | null
+          video_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          folder_id?: string | null
+          id?: string
+          notes?: string | null
+          user_id?: string | null
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmarked_videos_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "bookmark_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmarked_videos_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_sources: {
+        Row: {
+          created_at: string | null
+          id: string
+          source_name: string | null
+          source_type: string
+          source_url: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          source_name?: string | null
+          source_type: string
+          source_url: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          source_name?: string | null
+          source_type?: string
+          source_url?: string
+        }
+        Relationships: []
+      }
+      experts: {
+        Row: {
+          created_at: string | null
+          credentials: string | null
+          domain: Database["public"]["Enums"]["profile_category"] | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          credentials?: string | null
+          domain?: Database["public"]["Enums"]["profile_category"] | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          credentials?: string | null
+          domain?: Database["public"]["Enums"]["profile_category"] | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      insights: {
+        Row: {
+          actionability_score: number | null
+          category: Database["public"]["Enums"]["profile_category"]
+          created_at: string | null
+          id: string
+          impact_score: number | null
+          insight_text: string
+          video_id: string | null
+        }
+        Insert: {
+          actionability_score?: number | null
+          category: Database["public"]["Enums"]["profile_category"]
+          created_at?: string | null
+          id?: string
+          impact_score?: number | null
+          insight_text: string
+          video_id?: string | null
+        }
+        Update: {
+          actionability_score?: number | null
+          category?: Database["public"]["Enums"]["profile_category"]
+          created_at?: string | null
+          id?: string
+          impact_score?: number | null
+          insight_text?: string
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insights_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      personalized_insights: {
+        Row: {
+          action_items: string[] | null
+          created_at: string | null
+          id: string
+          insight_text: string
+          profile_id: string | null
+          relevance_score: number | null
+          video_id: string | null
+        }
+        Insert: {
+          action_items?: string[] | null
+          created_at?: string | null
+          id?: string
+          insight_text: string
+          profile_id?: string | null
+          relevance_score?: number | null
+          video_id?: string | null
+        }
+        Update: {
+          action_items?: string[] | null
+          created_at?: string | null
+          id?: string
+          insight_text?: string
+          profile_id?: string | null
+          relevance_score?: number | null
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personalized_insights_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_context_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personalized_insights_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_context_profiles: {
+        Row: {
+          category: Database["public"]["Enums"]["profile_category"]
+          challenges: string
+          created_at: string | null
+          experience_level: string
+          goals: string
+          id: string
+          profile_name: string
+          role_description: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["profile_category"]
+          challenges: string
+          created_at?: string | null
+          experience_level: string
+          goals: string
+          id?: string
+          profile_name: string
+          role_description: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["profile_category"]
+          challenges?: string
+          created_at?: string | null
+          experience_level?: string
+          goals?: string
+          id?: string
+          profile_name?: string
+          role_description?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string | null
+          id: string
+          profile_limit: number | null
+          tier: Database["public"]["Enums"]["subscription_tier"] | null
+          updated_at: string | null
+          user_id: string | null
+          videos_analyzed_this_month: number | null
+          videos_per_month: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          profile_limit?: number | null
+          tier?: Database["public"]["Enums"]["subscription_tier"] | null
+          updated_at?: string | null
+          user_id?: string | null
+          videos_analyzed_this_month?: number | null
+          videos_per_month?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          profile_limit?: number | null
+          tier?: Database["public"]["Enums"]["subscription_tier"] | null
+          updated_at?: string | null
+          user_id?: string | null
+          videos_analyzed_this_month?: number | null
+          videos_per_month?: number | null
+        }
+        Relationships: []
+      }
+      videos: {
+        Row: {
+          analyzed_at: string | null
+          created_at: string | null
+          expert_id: string | null
+          id: string
+          source_id: string | null
+          status: string | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string | null
+          user_id: string | null
+          video_id: string
+          youtube_url: string
+        }
+        Insert: {
+          analyzed_at?: string | null
+          created_at?: string | null
+          expert_id?: string | null
+          id?: string
+          source_id?: string | null
+          status?: string | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string | null
+          user_id?: string | null
+          video_id: string
+          youtube_url: string
+        }
+        Update: {
+          analyzed_at?: string | null
+          created_at?: string | null
+          expert_id?: string | null
+          id?: string
+          source_id?: string | null
+          status?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string | null
+          video_id?: string
+          youtube_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "videos_expert_id_fkey"
+            columns: ["expert_id"]
+            isOneToOne: false
+            referencedRelation: "experts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "videos_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "content_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +405,17 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      profile_category:
+        | "business"
+        | "sports"
+        | "health_fitness"
+        | "technology"
+        | "personal_development"
+        | "finance"
+        | "entertainment"
+        | "education"
+        | "general"
+      subscription_tier: "free" | "pro" | "team"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +542,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      profile_category: [
+        "business",
+        "sports",
+        "health_fitness",
+        "technology",
+        "personal_development",
+        "finance",
+        "entertainment",
+        "education",
+        "general",
+      ],
+      subscription_tier: ["free", "pro", "team"],
+    },
   },
 } as const
