@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Play, ChevronDown } from 'lucide-react';
+import { Loader2, Play, ChevronDown, Sparkles } from 'lucide-react';
 import { ProfileQuickSwitcher } from './ProfileQuickSwitcher';
 
 const videoSchema = z.object({
@@ -28,9 +28,13 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const { toast } = useToast();
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<VideoFormData>({
+  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema),
   });
+
+  const useSampleLink = () => {
+    setValue('videoUrl', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+  };
 
   const handleAnalyze = async (data: VideoFormData) => {
     setIsAnalyzing(true);
@@ -42,11 +46,19 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('402') || error.message?.includes('Payment')) {
+          throw new Error('Payment required. Please upgrade your plan.');
+        }
+        if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
+          throw new Error('Rate limit exceeded. Please try again later.');
+        }
+        throw error;
+      }
 
       toast({
         title: "Success!",
-        description: `Video analyzed! ${result.insightCount} insights extracted.`,
+        description: `Video analyzed! ${result.insightCount || 0} insights extracted.`,
       });
 
       onAnalysisComplete();
@@ -79,7 +91,20 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
       <CardContent>
         <form onSubmit={handleSubmit(handleAnalyze)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="videoUrl">YouTube Video URL</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="videoUrl">YouTube Video URL</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={useSampleLink}
+                disabled={isAnalyzing}
+                className="h-auto py-1 text-xs"
+              >
+                <Sparkles className="mr-1 h-3 w-3" />
+                Use sample
+              </Button>
+            </div>
             <Input
               id="videoUrl"
               type="url"

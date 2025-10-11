@@ -13,9 +13,10 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[analyze-video] Received request');
     const { videoUrl, profileId } = await req.json();
     
-    console.log('Analyzing video:', videoUrl, 'with profile:', profileId);
+    console.log('[analyze-video] Analyzing video:', videoUrl, 'with profile:', profileId);
 
     if (!videoUrl) {
       return new Response(
@@ -40,6 +41,7 @@ serve(async (req) => {
     }
 
     // Get video metadata from YouTube oEmbed
+    console.log('[analyze-video] Fetching oEmbed metadata');
     const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
     const oembedResponse = await fetch(oembedUrl);
     const oembedData = await oembedResponse.json();
@@ -47,9 +49,10 @@ serve(async (req) => {
     const videoTitle = oembedData.title;
     const channelName = oembedData.author_name;
 
-    console.log('Video metadata:', { videoTitle, channelName });
+    console.log('[analyze-video] Video metadata:', { videoTitle, channelName });
 
     // Get user profile if provided, otherwise get default profile
+    console.log('[analyze-video] Resolving user profile');
     let userProfile = null;
     let profileUsed = 'default';
     
@@ -61,7 +64,7 @@ serve(async (req) => {
         .single();
       userProfile = data;
       profileUsed = userProfile?.profile_name || 'default';
-      console.log('Using custom profile:', userProfile);
+      console.log('[analyze-video] Using custom profile:', userProfile);
     } else {
       // Try to fetch default profile
       const { data: { user } } = await supabase.auth.getUser(
@@ -84,7 +87,7 @@ serve(async (req) => {
             goals: 'General learning and improvement',
             challenges: 'Various'
           };
-          console.log('Using default profile:', defaultProfile.description);
+          console.log('[analyze-video] Using default profile:', defaultProfile.description);
         }
       }
     }
@@ -127,6 +130,7 @@ INSTRUCTIONS:
 7. Categorize insights (e.g., Strategy, Execution, Mindset, Technical, Nutrition, Training, etc.)`;
 
     // Call Lovable AI with tool calling
+    console.log('[analyze-video] Calling Lovable AI API');
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -238,22 +242,36 @@ INSTRUCTIONS:
     }
 
     const aiData = await aiResponse.json();
-    console.log('AI response:', JSON.stringify(aiData, null, 2));
+    console.log('[analyze-video] AI response received');
 
     const toolCall = aiData.choices[0].message.tool_calls?.[0];
     if (!toolCall) {
-      console.error('No tool call in AI response');
+      console.error('[analyze-video] No tool call in AI response');
       return new Response(
         JSON.stringify({ error: 'AI did not provide structured data' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const extractedData = JSON.parse(toolCall.function.arguments);
-    console.log('Extracted data:', extractedData);
+    let extractedData;
+    try {
+      extractedData = JSON.parse(toolCall.function.arguments);
+      console.log('[analyze-video] Extracted data:', { 
+        insightsCount: extractedData.insights?.length,
+        speakersCount: extractedData.speakers?.length,
+        tagsCount: extractedData.tags?.length 
+      });
+    } catch (parseError) {
+      console.error('[analyze-video] Failed to parse tool arguments:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to parse AI response data' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Store in database
     // 1. Create or find content source
+    console.log('[analyze-video] Upserting content source');
     const { data: existingSource } = await supabase
       .from('content_sources')
       .select('id')
@@ -275,6 +293,7 @@ INSTRUCTIONS:
     }
 
     // 2. Create or find expert
+    console.log('[analyze-video] Upserting expert');
     const { data: existingExpert } = await supabase
       .from('experts')
       .select('id')
@@ -296,6 +315,7 @@ INSTRUCTIONS:
     }
 
     // 3. Get user ID from auth header
+    console.log('[analyze-video] Resolving user from token');
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
     const { data: { user } } = await supabase.auth.getUser(token || '');
@@ -306,8 +326,10 @@ INSTRUCTIONS:
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    console.log('[analyze-video] User resolved:', user.id);
 
     // 4. Create video record
+    console.log('[analyze-video] Inserting video record');
     const { data: video, error: videoError } = await supabase
       .from('videos')
       .insert({
@@ -336,6 +358,7 @@ INSTRUCTIONS:
     }
 
     // 5. Insert insights
+    console.log('[analyze-video] Inserting general insights');
     const insightsToInsert = extractedData.insights.map((insight: any) => ({
       video_id: video.id,
       category: insight.category?.toLowerCase().replace(/\s+/g, '_') || 'general',
@@ -354,6 +377,7 @@ INSTRUCTIONS:
     }
 
     // 6. Insert personalized insights if profile provided
+    console.log('[analyze-video] Inserting personalized insights');
     if (userProfile && extractedData.personalized_insights?.length > 0) {
       const personalizedToInsert = extractedData.personalized_insights.map((pInsight: any) => ({
         video_id: video.id,
@@ -375,6 +399,7 @@ INSTRUCTIONS:
       }
     }
 
+    console.log('[analyze-video] Success! Returning response');
     return new Response(
       JSON.stringify({
         success: true,

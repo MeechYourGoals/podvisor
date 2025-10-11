@@ -235,10 +235,9 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
 
   if (videos.length === 0) {
     return (
-      <Card className="p-12 text-center">
-        <p className="text-muted-foreground">
-          No videos analyzed yet. Submit a YouTube URL above to get started!
-        </p>
+      <Card className="p-8 text-center">
+        <p className="text-muted-foreground mb-2">No videos analyzed yet.</p>
+        <p className="text-sm text-muted-foreground">Try analyzing a video above to see it here.</p>
       </Card>
     );
   }
