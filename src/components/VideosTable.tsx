@@ -1,27 +1,49 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Eye, Bookmark, Youtube, Search, Filter, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Heart, 
+  Search, 
+  ExternalLink, 
+  Eye, 
+  Download, 
+  Link2, 
+  Trash2,
+  MoreVertical,
+  X
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatDistanceToNow } from "date-fns";
+
+interface Speaker {
+  name: string;
+  role: string;
+}
 
 interface Video {
   id: string;
   title: string;
   youtube_url: string;
   video_id: string;
-  thumbnail_url: string | null;
   analyzed_at: string;
-  status: string;
   profile_used: string | null;
-  experts: { name: string; domain: string } | null;
-  content_sources: { source_name: string } | null;
+  is_favorite: boolean;
+  tags: string[];
+  speakers: Speaker[];
+  content_sources: {
+    source_name: string;
+  } | null;
 }
 
 interface VideosTableProps {
@@ -33,235 +55,369 @@ interface VideosTableProps {
 const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableProps) => {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [domainFilter, setDomainFilter] = useState('all');
-  const { user } = useAuth();
-
-  useEffect(() => {
-    if (user) {
-      loadVideos();
-      subscribeToVideos();
-    }
-  }, [user, refreshTrigger]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const { toast } = useToast();
 
   const loadVideos = async () => {
-    setLoading(true);
     try {
-      let query = (supabase as any)
-        .from('videos')
+      const { data, error } = await supabase
+        .from("videos")
         .select(`
           id,
           title,
           youtube_url,
           video_id,
-          thumbnail_url,
           analyzed_at,
-          status,
           profile_used,
-          experts (name, domain),
-          content_sources (source_name)
+          is_favorite,
+          tags,
+          speakers,
+          content_sources (
+            source_name
+          )
         `)
-        .eq('user_id', user?.id)
-        .order('analyzed_at', { ascending: false });
-
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
-
-      const { data, error } = await query;
+        .order("analyzed_at", { ascending: false });
 
       if (error) throw error;
-      setVideos(data || []);
+      setVideos((data as any) || []);
     } catch (error) {
-      console.error('Error loading videos:', error);
+      console.error("Error loading videos:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load videos",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const subscribeToVideos = () => {
+  useEffect(() => {
+    loadVideos();
+
     const channel = supabase
-      .channel('videos_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'videos',
-        filter: `user_id=eq.${user?.id}`
-      }, () => {
-        loadVideos();
-      })
+      .channel("videos-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "videos",
+        },
+        () => {
+          loadVideos();
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [refreshTrigger]);
+
+  const handleToggleFavorite = async (videoId: string, currentState: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("videos")
+        .update({ is_favorite: !currentState })
+        .eq("id", videoId);
+
+      if (error) throw error;
+
+      setVideos(prev =>
+        prev.map(v => (v.id === videoId ? { ...v, is_favorite: !currentState } : v))
+      );
+
+      toast({
+        title: !currentState ? "Added to favorites" : "Removed from favorites",
+        description: !currentState ? "Video saved to your favorites" : "Video removed from favorites",
+      });
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update favorite status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async (videoId: string) => {
+    try {
+      const { error } = await supabase
+        .from("videos")
+        .delete()
+        .eq("id", videoId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Video deleted",
+        description: "The video analysis has been removed",
+      });
+    } catch (error) {
+      console.error("Error deleting video:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete video",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCopyLink = (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Link copied",
+      description: "YouTube link copied to clipboard",
+    });
+  };
+
+  const handleExport = (video: Video) => {
+    const dataStr = JSON.stringify(video, null, 2);
+    const dataBlob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${video.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleTagClick = (tag: string) => {
+    setActiveTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const removeTag = (tag: string) => {
+    setActiveTags(prev => prev.filter(t => t !== tag));
+  };
+
+  const clearAllTags = () => {
+    setActiveTags([]);
   };
 
   const filteredVideos = videos.filter(video => {
     const matchesSearch = video.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDomain = domainFilter === 'all' || video.experts?.domain === domainFilter;
-    return matchesSearch && matchesDomain;
+    const matchesTags =
+      activeTags.length === 0 ||
+      activeTags.every(tag => video.tags?.includes(tag));
+    const matchesFavorites = !showFavoritesOnly || video.is_favorite;
+    return matchesSearch && matchesTags && matchesFavorites;
   });
+
+  const getPrimarySpeakers = (speakers: Speaker[]) => {
+    if (!speakers || speakers.length === 0) return "Unknown";
+    const primary = speakers.filter(s => 
+      s.role === "interviewee" || s.role === "guest"
+    );
+    if (primary.length > 0) {
+      return primary.map(s => s.name).join(", ");
+    }
+    return speakers[0].name;
+  };
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-8 w-48" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <Skeleton key={i} className="h-16 w-full" />
-            ))}
-          </div>
-        </CardContent>
+      <Card className="p-6">
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
       </Card>
     );
   }
 
   if (videos.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Videos</CardTitle>
-          <CardDescription>No videos analyzed yet. Start by analyzing a YouTube video above!</CardDescription>
-        </CardHeader>
+      <Card className="p-12 text-center">
+        <p className="text-muted-foreground">
+          No videos analyzed yet. Submit a YouTube URL above to get started!
+        </p>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Youtube className="h-5 w-5 text-primary" />
-              Your Videos ({filteredVideos.length})
-            </CardTitle>
-            <CardDescription>Analyzed videos and insights</CardDescription>
-          </div>
+    <div className="space-y-4">
+      {/* Header Controls */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="relative flex-1 min-w-[300px]">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search videos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
         </div>
-        <div className="flex gap-2 mt-4 flex-wrap">
-          <div className="flex-1 min-w-[200px] relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search videos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={domainFilter} onValueChange={setDomainFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="All Domains" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Domains</SelectItem>
-              <SelectItem value="business">Business</SelectItem>
-              <SelectItem value="sports">Sports</SelectItem>
-              <SelectItem value="health_fitness">Health</SelectItem>
-              <SelectItem value="technology">Technology</SelectItem>
-              <SelectItem value="finance">Finance</SelectItem>
-              <SelectItem value="education">Education</SelectItem>
-            </SelectContent>
-          </Select>
+        <Button
+          variant={showFavoritesOnly ? "default" : "outline"}
+          onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+          className="gap-2"
+        >
+          <Heart className={`h-4 w-4 ${showFavoritesOnly ? "fill-current" : ""}`} />
+          Favorites
+        </Button>
+      </div>
+
+      {/* Active Tags */}
+      {activeTags.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-muted-foreground">Active filters:</span>
+          {activeTags.map(tag => (
+            <Badge key={tag} variant="secondary" className="gap-1">
+              {tag}
+              <X
+                className="h-3 w-3 cursor-pointer hover:text-destructive"
+                onClick={() => removeTag(tag)}
+              />
+            </Badge>
+          ))}
+          <Button variant="ghost" size="sm" onClick={clearAllTags}>
+            Clear all
+          </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]"></TableHead>
-                <TableHead>Video</TableHead>
-                <TableHead>Expert</TableHead>
-                <TableHead>Profile</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  Date
-                </TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredVideos.map((video) => (
-                <TableRow key={video.id} className="hover:bg-muted/50">
-                  <TableCell>
-                    <img
-                      src={`https://img.youtube.com/vi/${video.video_id}/default.jpg`}
-                      alt=""
-                      className="w-12 h-9 object-cover rounded"
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium max-w-[300px] truncate">
-                    {video.title}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-sm">{video.experts?.name || 'Unknown'}</span>
-                      {video.experts?.domain && (
-                        <Badge variant="outline" className="w-fit text-xs">
-                          {video.experts.domain.replace('_', ' ')}
-                        </Badge>
-                      )}
+      )}
+
+      {/* Videos List */}
+      <Card>
+        <div className="divide-y divide-border">
+          {filteredVideos.map((video) => (
+            <div
+              key={video.id}
+              className="p-4 hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-start gap-4">
+                {/* Thumbnail */}
+                <img
+                  src={`https://img.youtube.com/vi/${video.video_id}/hqdefault.jpg`}
+                  alt={video.title}
+                  className="w-32 h-20 object-cover rounded"
+                />
+
+                {/* Content */}
+                <div className="flex-1 min-w-0 space-y-2">
+                  {/* Title & Date */}
+                  <div>
+                    <h3 className="font-medium text-base line-clamp-1">{video.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDistanceToNow(new Date(video.analyzed_at), { addSuffix: true })}
+                    </p>
+                  </div>
+
+                  {/* Company/Source & Speakers */}
+                  <div className="flex gap-6 text-sm">
+                    {video.content_sources?.source_name && (
+                      <div>
+                        <span className="text-muted-foreground">Source: </span>
+                        <span>{video.content_sources.source_name}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-muted-foreground">Speaker(s): </span>
+                      <span>{getPrimarySpeakers(video.speakers)}</span>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={video.profile_used === 'default' ? 'secondary' : 'default'}
-                      className="capitalize text-xs"
-                    >
-                      {video.profile_used || 'default'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={video.status === 'completed' ? 'default' : 'destructive'}>
-                      {video.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(video.analyzed_at), 'MMM d, yyyy')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-1 justify-end">
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                  </div>
+
+                  {/* Tags */}
+                  {video.tags && video.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {video.tags.map(tag => (
+                        <Badge
+                          key={tag}
+                          variant="outline"
+                          className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-xs"
+                          onClick={() => handleTagClick(tag)}
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleToggleFavorite(video.id, video.is_favorite)}
+                  >
+                    <Heart
+                      className={`h-5 w-5 ${
+                        video.is_favorite
+                          ? "fill-red-500 text-red-500"
+                          : "text-muted-foreground"
+                      }`}
+                    />
+                  </Button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem
+                        onClick={() => window.open(video.youtube_url, "_blank")}
+                        className="gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Watch Now
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
                         onClick={() => onVideoSelect(video.id)}
+                        className="gap-2"
                       >
                         <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onBookmark(video.id)}
+                        View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleExport(video)}
+                        className="gap-2"
                       >
-                        <Bookmark className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                        <Download className="h-4 w-4" />
+                        Export Episode
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleCopyLink(video.youtube_url)}
+                        className="gap-2"
+                      >
+                        <Link2 className="h-4 w-4" />
+                        Copy Link
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(video.id)}
+                        className="gap-2 text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete Analysis
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      </CardContent>
-    </Card>
+      </Card>
+
+      {filteredVideos.length === 0 && (
+        <Card className="p-12 text-center">
+          <p className="text-muted-foreground">
+            No videos match your current filters.
+          </p>
+        </Card>
+      )}
+    </div>
   );
 };
 

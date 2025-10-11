@@ -373,9 +373,12 @@ export type Database = {
           created_at: string | null
           expert_id: string | null
           id: string
+          is_favorite: boolean | null
           profile_used: string | null
           source_id: string | null
+          speakers: Json | null
           status: string | null
+          tags: string[] | null
           thumbnail_url: string | null
           title: string
           updated_at: string | null
@@ -388,9 +391,12 @@ export type Database = {
           created_at?: string | null
           expert_id?: string | null
           id?: string
+          is_favorite?: boolean | null
           profile_used?: string | null
           source_id?: string | null
+          speakers?: Json | null
           status?: string | null
+          tags?: string[] | null
           thumbnail_url?: string | null
           title: string
           updated_at?: string | null
@@ -403,9 +409,12 @@ export type Database = {
           created_at?: string | null
           expert_id?: string | null
           id?: string
+          is_favorite?: boolean | null
           profile_used?: string | null
           source_id?: string | null
+          speakers?: Json | null
           status?: string | null
+          tags?: string[] | null
           thumbnail_url?: string | null
           title?: string
           updated_at?: string | null

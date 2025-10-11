@@ -15,6 +15,11 @@ interface VideoDetailProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface Speaker {
+  name: string;
+  role: string;
+}
+
 interface Video {
   id: string;
   title: string;
@@ -22,6 +27,8 @@ interface Video {
   video_id: string;
   analyzed_at: string;
   profile_used: string | null;
+  speakers: Speaker[];
+  tags: string[];
   experts: { name: string; credentials: string; domain: string } | null;
   content_sources: { source_name: string } | null;
 }
@@ -60,7 +67,7 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
 
     try {
       // Load video details
-      const { data: videoData } = await (supabase as any)
+      const { data: videoData } = await supabase
         .from('videos')
         .select(`
           id,
@@ -69,13 +76,15 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
           video_id,
           analyzed_at,
           profile_used,
+          speakers,
+          tags,
           experts (name, credentials, domain),
           content_sources (source_name)
         `)
         .eq('id', videoId)
         .single();
 
-      setVideo(videoData);
+      setVideo(videoData as any);
 
       // Load insights
       const { data: insightsData } = await (supabase as any)
@@ -211,11 +220,12 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
           ) : (
             <>
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+                <div className="flex-1 space-y-3">
+                  <div>
                     <SheetTitle className="text-left">{video.title}</SheetTitle>
                   </div>
-                  <div className="flex items-center gap-2 mb-2">
+                  
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Badge 
                       variant={video.profile_used === 'default' ? 'secondary' : 'default'}
                       className="text-xs capitalize"
@@ -223,17 +233,39 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                       Viewed through: {video.profile_used || 'default'}
                     </Badge>
                   </div>
-                  <SheetDescription className="text-left">
-                    <div className="flex flex-wrap gap-2 items-center">
-                      <span className="font-medium">{video.experts?.name}</span>
-                      {video.experts?.domain && (
-                        <Badge variant="outline">
-                          {video.experts.domain.replace('_', ' ')}
-                        </Badge>
-                      )}
+
+                  {/* Speaker(s) */}
+                  {video.speakers && video.speakers.length > 0 && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm text-muted-foreground">Speaker(s):</span>
+                      {video.speakers
+                        .filter(s => s.role === "interviewee" || s.role === "guest")
+                        .map((speaker, idx) => (
+                          <Badge key={idx} variant="secondary">
+                            {speaker.name}
+                          </Badge>
+                        ))}
                     </div>
-                    {video.experts?.credentials && (
-                      <p className="text-xs mt-1">{video.experts.credentials}</p>
+                  )}
+
+                  {/* Tags */}
+                  {video.tags && video.tags.length > 0 && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm text-muted-foreground">Tags:</span>
+                      {video.tags.map((tag, idx) => (
+                        <Badge key={idx} variant="outline">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Source */}
+                  <SheetDescription className="text-left">
+                    {video.content_sources && (
+                      <p className="text-sm">
+                        Source: {video.content_sources.source_name}
+                      </p>
                     )}
                   </SheetDescription>
                 </div>

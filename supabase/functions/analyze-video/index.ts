@@ -160,6 +160,26 @@ INSTRUCTIONS:
                   },
                   required: ["name", "domain"]
                 },
+                speakers: {
+                  type: "array",
+                  description: "Array of speakers with their roles. Identify PRIMARY speakers (interviewees/guests) vs hosts. For interviews, focus on the person being interviewed, not the host.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string", description: "Full name of the speaker" },
+                      role: { type: "string", enum: ["interviewee", "host", "panelist", "guest"], description: "Role of the speaker" }
+                    },
+                    required: ["name", "role"]
+                  },
+                  minItems: 1
+                },
+                tags: {
+                  type: "array",
+                  description: "3-7 smart tags for categorization (e.g., 'Psychology', 'Interview', 'Leadership')",
+                  items: { type: "string" },
+                  minItems: 3,
+                  maxItems: 7
+                },
                 insights: {
                   type: "array",
                   items: {
@@ -200,7 +220,7 @@ INSTRUCTIONS:
                   maxItems: 5
                 }
               },
-              required: ["source_name", "expert", "insights"]
+              required: ["source_name", "expert", "speakers", "tags", "insights"]
             }
           }
         }],
@@ -299,7 +319,10 @@ INSTRUCTIONS:
         source_id: sourceId,
         expert_id: expertId,
         status: 'completed',
-        profile_used: profileUsed
+        profile_used: profileUsed,
+        speakers: extractedData.speakers || [],
+        tags: extractedData.tags || [],
+        is_favorite: false
       })
       .select('id')
       .single();
