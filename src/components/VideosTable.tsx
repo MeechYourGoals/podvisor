@@ -19,6 +19,7 @@ interface Video {
   thumbnail_url: string | null;
   analyzed_at: string;
   status: string;
+  profile_used: string | null;
   experts: { name: string; domain: string } | null;
   content_sources: { source_name: string } | null;
 }
@@ -57,6 +58,7 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
           thumbnail_url,
           analyzed_at,
           status,
+          profile_used,
           experts (name, domain),
           content_sources (source_name)
         `)
@@ -187,7 +189,7 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
                 <TableHead className="w-[50px]"></TableHead>
                 <TableHead>Video</TableHead>
                 <TableHead>Expert</TableHead>
-                <TableHead>Source</TableHead>
+                <TableHead>Profile</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
@@ -219,8 +221,13 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {video.content_sources?.source_name || 'YouTube'}
+                  <TableCell>
+                    <Badge 
+                      variant={video.profile_used === 'default' ? 'secondary' : 'default'}
+                      className="capitalize text-xs"
+                    >
+                      {video.profile_used || 'default'}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge variant={video.status === 'completed' ? 'default' : 'destructive'}>

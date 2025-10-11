@@ -190,6 +190,7 @@ export type Database = {
           id: string
           impact_score: number | null
           insight_text: string
+          profile_used: string | null
           video_id: string | null
         }
         Insert: {
@@ -199,6 +200,7 @@ export type Database = {
           id?: string
           impact_score?: number | null
           insight_text: string
+          profile_used?: string | null
           video_id?: string | null
         }
         Update: {
@@ -208,6 +210,7 @@ export type Database = {
           id?: string
           impact_score?: number | null
           insight_text?: string
+          profile_used?: string | null
           video_id?: string | null
         }
         Relationships: [
@@ -227,6 +230,7 @@ export type Database = {
           id: string
           insight_text: string
           profile_id: string | null
+          profile_used: string | null
           relevance_score: number | null
           video_id: string | null
         }
@@ -236,6 +240,7 @@ export type Database = {
           id?: string
           insight_text: string
           profile_id?: string | null
+          profile_used?: string | null
           relevance_score?: number | null
           video_id?: string | null
         }
@@ -245,6 +250,7 @@ export type Database = {
           id?: string
           insight_text?: string
           profile_id?: string | null
+          profile_used?: string | null
           relevance_score?: number | null
           video_id?: string | null
         }
@@ -304,6 +310,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_default_profiles: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_subscriptions: {
         Row: {
           created_at: string | null
@@ -343,6 +373,7 @@ export type Database = {
           created_at: string | null
           expert_id: string | null
           id: string
+          profile_used: string | null
           source_id: string | null
           status: string | null
           thumbnail_url: string | null
@@ -357,6 +388,7 @@ export type Database = {
           created_at?: string | null
           expert_id?: string | null
           id?: string
+          profile_used?: string | null
           source_id?: string | null
           status?: string | null
           thumbnail_url?: string | null
@@ -371,6 +403,7 @@ export type Database = {
           created_at?: string | null
           expert_id?: string | null
           id?: string
+          profile_used?: string | null
           source_id?: string | null
           status?: string | null
           thumbnail_url?: string | null

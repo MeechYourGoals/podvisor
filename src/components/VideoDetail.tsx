@@ -21,6 +21,7 @@ interface Video {
   youtube_url: string;
   video_id: string;
   analyzed_at: string;
+  profile_used: string | null;
   experts: { name: string; credentials: string; domain: string } | null;
   content_sources: { source_name: string } | null;
 }
@@ -67,6 +68,7 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
           youtube_url,
           video_id,
           analyzed_at,
+          profile_used,
           experts (name, credentials, domain),
           content_sources (source_name)
         `)
@@ -210,8 +212,18 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
             <>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <SheetTitle className="text-left">{video.title}</SheetTitle>
-                  <SheetDescription className="text-left mt-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <SheetTitle className="text-left">{video.title}</SheetTitle>
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge 
+                      variant={video.profile_used === 'default' ? 'secondary' : 'default'}
+                      className="text-xs capitalize"
+                    >
+                      Viewed through: {video.profile_used || 'default'}
+                    </Badge>
+                  </div>
+                  <SheetDescription className="text-left">
                     <div className="flex flex-wrap gap-2 items-center">
                       <span className="font-medium">{video.experts?.name}</span>
                       {video.experts?.domain && (

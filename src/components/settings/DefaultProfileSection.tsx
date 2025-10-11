@@ -1,0 +1,131 @@
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
+
+export const DefaultProfileSection = () => {
+  const [description, setDescription] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadDefaultProfile();
+  }, []);
+
+  const loadDefaultProfile = async () => {
+    setIsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('user_default_profiles')
+        .select('description')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) setDescription(data.description);
+    } catch (error: any) {
+      console.error('Error loading default profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!description.trim()) {
+      toast({
+        title: "Description required",
+        description: "Please enter a description for your default profile",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('user_default_profiles')
+        .upsert({
+          user_id: user.id,
+          description: description.trim(),
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Your default profile has been saved",
+      });
+    } catch (error: any) {
+      console.error('Error saving default profile:', error);
+      toast({
+        title: "Error",
+        description: error.message || 'Failed to save default profile',
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold mb-1">Default Profile</h3>
+        <p className="text-sm text-muted-foreground">
+          This is used for all analyses unless you select a specific profile
+        </p>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="default-description">Who are you?</Label>
+        <Textarea
+          id="default-description"
+          placeholder="e.g., I'm a middle-aged mom in California with 2 kids who is starting to get back to work after being out of the workforce for 2 years..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={6}
+          className="resize-none"
+        />
+        <p className="text-xs text-muted-foreground">
+          Describe yourself to get more relevant insights from videos
+        </p>
+      </div>
+
+      <Button 
+        onClick={handleSave} 
+        disabled={isSaving || !description.trim()}
+        className="w-full"
+      >
+        {isSaving ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Saving...
+          </>
+        ) : (
+          'Save Default Profile'
+        )}
+      </Button>
+    </div>
+  );
+};

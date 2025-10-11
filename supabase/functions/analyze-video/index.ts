@@ -49,8 +49,10 @@ serve(async (req) => {
 
     console.log('Video metadata:', { videoTitle, channelName });
 
-    // Get user profile if provided
+    // Get user profile if provided, otherwise get default profile
     let userProfile = null;
+    let profileUsed = 'default';
+    
     if (profileId) {
       const { data } = await supabase
         .from('user_context_profiles')
@@ -58,7 +60,33 @@ serve(async (req) => {
         .eq('id', profileId)
         .single();
       userProfile = data;
-      console.log('User profile:', userProfile);
+      profileUsed = userProfile?.profile_name || 'default';
+      console.log('Using custom profile:', userProfile);
+    } else {
+      // Try to fetch default profile
+      const { data: { user } } = await supabase.auth.getUser(
+        req.headers.get('authorization')?.replace('Bearer ', '') || ''
+      );
+      
+      if (user) {
+        const { data: defaultProfile } = await supabase
+          .from('user_default_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (defaultProfile) {
+          userProfile = {
+            profile_name: 'Default Profile',
+            category: 'general',
+            role_description: defaultProfile.description,
+            experience_level: 'varied',
+            goals: 'General learning and improvement',
+            challenges: 'Various'
+          };
+          console.log('Using default profile:', defaultProfile.description);
+        }
+      }
     }
 
     // Build AI prompt
@@ -270,7 +298,8 @@ INSTRUCTIONS:
         thumbnail_url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
         source_id: sourceId,
         expert_id: expertId,
-        status: 'completed'
+        status: 'completed',
+        profile_used: profileUsed
       })
       .select('id')
       .single();
@@ -289,7 +318,8 @@ INSTRUCTIONS:
       category: insight.category?.toLowerCase().replace(/\s+/g, '_') || 'general',
       insight_text: insight.insight_text,
       impact_score: insight.impact_score,
-      actionability_score: insight.actionability_score
+      actionability_score: insight.actionability_score,
+      profile_used: profileUsed
     }));
 
     const { error: insightsError } = await supabase
@@ -309,7 +339,8 @@ INSTRUCTIONS:
         relevance_score: pInsight.relevance_score,
         action_items: pInsight.action_items?.map((a: any) => 
           typeof a === 'string' ? a : `${a.action} (${a.timeline}, ${a.difficulty})`
-        ) || []
+        ) || [],
+        profile_used: profileUsed
       }));
 
       const { error: personalizedError } = await supabase

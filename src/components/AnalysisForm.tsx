@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Play } from 'lucide-react';
-import ContextProfileForm from './ContextProfileForm';
+import { Loader2, Play, ChevronDown } from 'lucide-react';
+import { ProfileQuickSwitcher } from './ProfileQuickSwitcher';
 
 const videoSchema = z.object({
   videoUrl: z.string().url('Please enter a valid YouTube URL').includes('youtube.com', { message: 'Please enter a valid YouTube URL' }).or(z.string().includes('youtu.be', { message: 'Please enter a valid YouTube URL' })),
@@ -23,27 +23,21 @@ interface AnalysisFormProps {
 }
 
 const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
-  const [step, setStep] = useState<'video' | 'profile'>('video');
-  const [videoUrl, setVideoUrl] = useState('');
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const { toast } = useToast();
 
-  const { register, handleSubmit, formState: { errors } } = useForm<VideoFormData>({
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema),
   });
 
-  const onVideoSubmit = (data: VideoFormData) => {
-    setVideoUrl(data.videoUrl);
-    setStep('profile');
-  };
-
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (data: VideoFormData) => {
     setIsAnalyzing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-video', {
+      const { data: result, error } = await supabase.functions.invoke('analyze-video', {
         body: {
-          videoUrl,
+          videoUrl: data.videoUrl,
           profileId: selectedProfileId,
         },
       });
@@ -52,13 +46,13 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
 
       toast({
         title: "Success!",
-        description: `Video analyzed! ${data.insightCount} insights extracted.`,
+        description: `Video analyzed! ${result.insightCount} insights extracted.`,
       });
 
       onAnalysisComplete();
-      setStep('video');
-      setVideoUrl('');
+      reset();
       setSelectedProfileId(null);
+      setIsAdvancedOpen(false);
     } catch (error: any) {
       console.error('Analysis error:', error);
       toast({
@@ -71,84 +65,71 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
     }
   };
 
-  const handleSkipProfile = () => {
-    handleAnalyze();
-  };
-
-  if (step === 'video') {
-    return (
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Play className="h-5 w-5 text-primary" />
-            Analyze a Video
-          </CardTitle>
-          <CardDescription>
-            Paste any YouTube URL to extract expert insights
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onVideoSubmit)} className="space-y-4">
-            <Tabs defaultValue="url" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="url">Direct URL</TabsTrigger>
-                <TabsTrigger value="channel">By Channel</TabsTrigger>
-              </TabsList>
-              <TabsContent value="url" className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="videoUrl">YouTube Video URL</Label>
-                  <Input
-                    id="videoUrl"
-                    type="url"
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    {...register('videoUrl')}
-                  />
-                  {errors.videoUrl && (
-                    <p className="text-sm text-destructive">{errors.videoUrl.message}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground">
-                    Works with any video featuring expert knowledge (interviews, tutorials, talks, etc.)
-                  </p>
-                </div>
-                <Button type="submit" className="w-full">
-                  Continue to Profile Setup
-                </Button>
-              </TabsContent>
-              <TabsContent value="channel" className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Coming soon: Browse popular channels by domain
-                </p>
-              </TabsContent>
-            </Tabs>
-          </form>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card className="mb-8">
       <CardHeader>
-        <CardTitle>Step 2: Context Profile (Optional)</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Play className="h-5 w-5 text-primary" />
+          Analyze a Video
+        </CardTitle>
         <CardDescription>
-          Tell us about your goals to get personalized insights
+          Paste any YouTube URL to extract expert insights
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ContextProfileForm
-          onProfileSelect={(profileId) => setSelectedProfileId(profileId)}
-          onAnalyze={handleAnalyze}
-          onSkip={handleSkipProfile}
-          isAnalyzing={isAnalyzing}
-        />
-        <Button
-          variant="outline"
-          onClick={() => setStep('video')}
-          className="mt-4 w-full"
-          disabled={isAnalyzing}
-        >
-          Back to Video URL
-        </Button>
+        <form onSubmit={handleSubmit(handleAnalyze)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="videoUrl">YouTube Video URL</Label>
+            <Input
+              id="videoUrl"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              {...register('videoUrl')}
+              disabled={isAnalyzing}
+            />
+            {errors.videoUrl && (
+              <p className="text-sm text-destructive">{errors.videoUrl.message}</p>
+            )}
+          </div>
+
+          <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between text-muted-foreground hover:text-foreground"
+              >
+                <span className="text-sm">Advanced: Filter through a profile</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4">
+              <ProfileQuickSwitcher
+                selectedProfileId={selectedProfileId}
+                onProfileSelect={setSelectedProfileId}
+              />
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Button type="submit" className="w-full" disabled={isAnalyzing}>
+            {isAnalyzing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Play className="mr-2 h-4 w-4" />
+                Analyze Video
+              </>
+            )}
+          </Button>
+
+          <p className="text-xs text-muted-foreground text-center">
+            {selectedProfileId ? 'Analyzing with selected profile' : 'Analyzing with your default profile'}
+          </p>
+        </form>
       </CardContent>
     </Card>
   );
