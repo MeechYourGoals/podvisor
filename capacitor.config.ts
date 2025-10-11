@@ -11,6 +11,10 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       launchShowDuration: 0
+    },
+    StatusBar: {
+      style: 'Dark',
+      backgroundColor: '#0f172a'
     }
   }
 };

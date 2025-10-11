@@ -3,22 +3,22 @@ import { Card, CardContent } from '@/components/ui/card';
 
 const HeroSection = () => {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-accent/5 to-background py-16 px-4 rounded-3xl mb-12">
+    <div className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-accent/5 to-background py-12 sm:py-16 px-4 rounded-3xl mb-8 sm:mb-12">
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxIDAgNiAyLjY5IDYgNnMtMi42OSA2LTYgNi02LTIuNjktNi02IDIuNjktNiA2LTZ6TTI0IDQyYzMuMzEgMCA2IDIuNjkgNiA2cy0yLjY5IDYtNiA2LTYtMi42OS02LTYgMi42OS02IDYtNnoiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9Ii4xIi8+PC9nPjwvc3ZnPg==')] opacity-40" />
       
       <div className="relative max-w-4xl mx-auto text-center">
-        <div className="flex items-center justify-center gap-3 mb-6">
-          <Sparkles className="h-10 w-10 text-primary animate-pulse" />
-          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+        <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <Sparkles className="h-8 sm:h-10 w-8 sm:w-10 text-primary animate-pulse" />
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
             Podvisor
           </h1>
         </div>
         
-        <p className="text-2xl md:text-3xl font-semibold text-foreground mb-4">
+        <p className="text-xl sm:text-2xl md:text-3xl font-semibold text-foreground mb-3 sm:mb-4 px-2">
           Your AI Advisor from YouTube
         </p>
         
-        <p className="text-lg md:text-xl text-muted-foreground mb-12 max-w-2xl mx-auto">
+        <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-8 sm:mb-12 max-w-2xl mx-auto px-2">
           Extract personalized insights from any expert video - startup founders, athletes, doctors, educators, and more
         </p>
 

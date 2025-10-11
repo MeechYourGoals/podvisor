@@ -5,7 +5,7 @@ import { SettingsSidebar } from './SettingsSidebar';
 
 export const AppHeader = () => {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-safe">
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -19,7 +19,7 @@ export const AppHeader = () => {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-80 overflow-y-auto">
+          <SheetContent side="right" className="w-[90vw] max-w-md overflow-y-auto">
             <SettingsSidebar />
           </SheetContent>
         </Sheet>

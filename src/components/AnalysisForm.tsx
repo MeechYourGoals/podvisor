@@ -108,7 +108,7 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
             <Input
               id="videoUrl"
               type="url"
-              placeholder="https://www.youtube.com/watch?v=..."
+              placeholder="YouTube URL..."
               {...register('videoUrl')}
               disabled={isAnalyzing}
             />

@@ -90,3 +90,13 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* iOS Safe Area Support */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: calc(0.5rem + env(safe-area-inset-top));
+  }
+}

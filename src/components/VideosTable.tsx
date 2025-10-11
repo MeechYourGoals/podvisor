@@ -285,7 +285,7 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
     <div className="space-y-4">
       {/* Header Controls */}
       <div className="flex items-center gap-4 flex-wrap">
-        <div className="relative flex-1 min-w-[300px]">
+        <div className="relative flex-1 min-w-[200px] sm:min-w-[300px]">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search videos..."
@@ -331,16 +331,16 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
               key={video.id}
               className="p-4 hover:bg-muted/50 transition-colors"
             >
-              <div className="flex items-start gap-4">
+              <div className="flex flex-col sm:flex-row items-start gap-4">
                 {/* Thumbnail */}
                 <img
                   src={`https://img.youtube.com/vi/${video.video_id}/hqdefault.jpg`}
                   alt={video.title}
-                  className="w-32 h-20 object-cover rounded"
+                  className="w-full sm:w-24 md:w-32 h-32 sm:h-16 md:h-20 object-cover rounded"
                 />
 
                 {/* Content */}
-                <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex-1 min-w-0 space-y-2 w-full">
                   {/* Title & Date */}
                   <div>
                     <h3 className="font-medium text-base line-clamp-1">{video.title}</h3>
@@ -370,7 +370,7 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
                         <Badge
                           key={tag}
                           variant="outline"
-                          className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-xs"
+                          className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-xs min-h-[44px] px-4 flex items-center"
                           onClick={() => handleTagClick(tag)}
                         >
                           {tag}
@@ -381,7 +381,7 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-start sm:self-auto">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -417,25 +417,27 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
                         <Eye className="h-4 w-4" />
                         View Details
                       </DropdownMenuItem>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <DropdownMenuItem className="gap-2" onSelect={(e) => e.preventDefault()}>
-                            <Download className="h-4 w-4" />
-                            Export Episode
-                          </DropdownMenuItem>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent side="left">
-                          <DropdownMenuItem onClick={() => handleExport(video, 'json')}>
-                            Export as JSON
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleExport(video, 'csv')}>
-                            Export as CSV
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleExport(video, 'markdown')}>
-                            Export as Markdown
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <DropdownMenuItem
+                        onClick={() => handleExport(video, 'json')}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Export as JSON
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleExport(video, 'csv')}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Export as CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleExport(video, 'markdown')}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Export as Markdown
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleCopyLink(video.youtube_url)}
                         className="gap-2"
