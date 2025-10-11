@@ -185,6 +185,11 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
   };
 
   const handleExport = async (video: Video, format: 'json' | 'csv' | 'markdown' = 'json') => {
+    toast({
+      title: "Exporting...",
+      description: `Preparing ${format.toUpperCase()} export`,
+    });
+
     try {
       const { data, error } = await supabase.functions.invoke('export-video', {
         body: { videoId: video.id, format },
@@ -214,7 +219,7 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
       console.error('Export error:', error);
       toast({
         title: 'Export failed',
-        description: 'Failed to export video',
+        description: 'Failed to export video. Please try again.',
         variant: 'destructive',
       });
     }

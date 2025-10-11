@@ -6,6 +6,7 @@ import HeroSection from '@/components/HeroSection';
 import AnalysisForm from '@/components/AnalysisForm';
 import VideosTable from '@/components/VideosTable';
 import VideoDetail from '@/components/VideoDetail';
+import { WelcomeDialog } from '@/components/WelcomeDialog';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -78,6 +79,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
+      <WelcomeDialog />
       
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <HeroSection />

@@ -1,4 +1,6 @@
-# Welcome to your Lovable project
+# Podvisor - AI-Powered Video Insight Extraction
+
+Podvisor analyzes YouTube videos and podcasts to extract personalized insights, action items, and key takeaways tailored to your role and goals.
 
 ## Project info
 
@@ -63,6 +65,15 @@ This project is built with:
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/167f3bd6-b2ca-46b6-9ba9-7cfb4745593b) and click on Share -> Publish.
+
+## Security Configuration
+
+**IMPORTANT**: Before deploying to production, enable Leaked Password Protection:
+1. Open Lovable Cloud Backend
+2. Navigate to Authentication → Policies
+3. Enable "Leaked Password Protection"
+
+This prevents users from using passwords that have been exposed in data breaches.
 
 ## Can I connect a custom domain to my Lovable project?
 

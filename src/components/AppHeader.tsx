@@ -9,7 +9,7 @@ export const AppHeader = () => {
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            InsightLens
+            Podvisor
           </div>
         </div>
         

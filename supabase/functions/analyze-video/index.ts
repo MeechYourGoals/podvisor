@@ -400,6 +400,17 @@ INSTRUCTIONS:
     }
 
     console.log('[analyze-video] Success! Returning response');
+    
+    // Increment user's video count
+    const { error: incrementError } = await supabase.rpc('increment_video_count', {
+      p_user_id: user.id
+    });
+    
+    if (incrementError) {
+      console.error('Error incrementing video count:', incrementError);
+      // Non-fatal, don't block the response
+    }
+    
     return new Response(
       JSON.stringify({
         success: true,
