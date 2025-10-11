@@ -184,15 +184,40 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
     });
   };
 
-  const handleExport = (video: Video) => {
-    const dataStr = JSON.stringify(video, null, 2);
-    const dataBlob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${video.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+  const handleExport = async (video: Video, format: 'json' | 'csv' | 'markdown' = 'json') => {
+    try {
+      const { data, error } = await supabase.functions.invoke('export-video', {
+        body: { videoId: video.id, format },
+      });
+
+      if (error) throw error;
+
+      // Create blob from response
+      const blob = new Blob([data], { 
+        type: format === 'json' ? 'application/json' : 
+              format === 'csv' ? 'text/csv' : 
+              'text/markdown' 
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const ext = format === 'markdown' ? 'md' : format;
+      link.download = `${video.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_export.${ext}`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Export successful',
+        description: `Video exported as ${format.toUpperCase()}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: 'Export failed',
+        description: 'Failed to export video',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleTagClick = (tag: string) => {
@@ -387,13 +412,25 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
                         <Eye className="h-4 w-4" />
                         View Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleExport(video)}
-                        className="gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        Export Episode
-                      </DropdownMenuItem>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <DropdownMenuItem className="gap-2" onSelect={(e) => e.preventDefault()}>
+                            <Download className="h-4 w-4" />
+                            Export Episode
+                          </DropdownMenuItem>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="left">
+                          <DropdownMenuItem onClick={() => handleExport(video, 'json')}>
+                            Export as JSON
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleExport(video, 'csv')}>
+                            Export as CSV
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleExport(video, 'markdown')}>
+                            Export as Markdown
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <DropdownMenuItem
                         onClick={() => handleCopyLink(video.youtube_url)}
                         className="gap-2"
