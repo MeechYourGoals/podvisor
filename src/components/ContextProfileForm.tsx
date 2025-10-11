@@ -15,12 +15,11 @@ import { Loader2 } from 'lucide-react';
 
 const profileSchema = z.object({
   profile_name: z.string().min(1, 'Profile name is required'),
-  category: z.enum(['business', 'sports', 'health', 'education', 'creative', 'technology', 'finance', 'personal_development', 'other']),
-  current_role: z.string().optional(),
-  experience_level: z.enum(['beginner', 'intermediate', 'advanced', 'expert']).optional(),
+  category: z.enum(['business', 'sports', 'health_fitness', 'technology', 'personal_development', 'finance', 'entertainment', 'education', 'general']),
+  role_description: z.string().min(1, 'Current role is required'),
+  experience_level: z.enum(['beginner', 'intermediate', 'advanced', 'expert']),
   goals: z.string().min(10, 'Please describe your goals (at least 10 characters)'),
-  challenges: z.string().optional(),
-  context_details: z.any().optional(),
+  challenges: z.string().min(1, 'Please describe your challenges'),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -37,6 +36,7 @@ const ContextProfileForm = ({ onProfileSelect, onAnalyze, onSkip, isAnalyzing }:
   const [useSavedProfile, setUseSavedProfile] = useState(false);
   const [saveAsProfile, setSaveAsProfile] = useState(false);
   const [selectedSavedProfile, setSelectedSavedProfile] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<any>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -49,8 +49,18 @@ const ContextProfileForm = ({ onProfileSelect, onAnalyze, onSkip, isAnalyzing }:
   useEffect(() => {
     if (user) {
       loadProfiles();
+      loadSubscription();
     }
   }, [user]);
+
+  const loadSubscription = async () => {
+    const { data } = await (supabase as any)
+      .from('user_subscriptions')
+      .select('*')
+      .eq('user_id', user?.id)
+      .single();
+    setSubscription(data);
+  };
 
   const loadProfiles = async () => {
     const { data, error } = await (supabase as any)
@@ -73,7 +83,7 @@ const ContextProfileForm = ({ onProfileSelect, onAnalyze, onSkip, isAnalyzing }:
     if (profile) {
       setValue('profile_name', profile.profile_name);
       setValue('category', profile.category);
-      setValue('current_role', profile.current_role);
+      setValue('role_description', profile.role_description);
       setValue('experience_level', profile.experience_level);
       setValue('goals', profile.goals);
       setValue('challenges', profile.challenges);
@@ -83,10 +93,12 @@ const ContextProfileForm = ({ onProfileSelect, onAnalyze, onSkip, isAnalyzing }:
 
   const onSubmit = async (data: ProfileFormData) => {
     if (saveAsProfile && user) {
-      if (savedProfiles.length >= 3) {
+      const profileLimit = subscription?.profile_limit || 3;
+      if (savedProfiles.length >= profileLimit) {
+        const tierName = subscription?.tier === 'pro' ? 'Pro' : subscription?.tier === 'team' ? 'Team' : 'Free';
         toast({
-          title: "Limit reached",
-          description: "You can only save up to 3 profiles. Delete one to save a new profile.",
+          title: "Profile limit reached",
+          description: `${tierName} plan: ${savedProfiles.length}/${profileLimit} profiles saved. ${subscription?.tier === 'free' ? 'Upgrade to Pro for 15 profiles!' : 'Delete one to save a new profile.'}`,
           variant: "destructive",
         });
         return;
@@ -205,13 +217,13 @@ const ContextProfileForm = ({ onProfileSelect, onAnalyze, onSkip, isAnalyzing }:
               <SelectContent>
                 <SelectItem value="business">Business</SelectItem>
                 <SelectItem value="sports">Sports</SelectItem>
-                <SelectItem value="health">Health</SelectItem>
-                <SelectItem value="education">Education</SelectItem>
-                <SelectItem value="creative">Creative</SelectItem>
+                <SelectItem value="health_fitness">Health & Fitness</SelectItem>
                 <SelectItem value="technology">Technology</SelectItem>
-                <SelectItem value="finance">Finance</SelectItem>
                 <SelectItem value="personal_development">Personal Development</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
+                <SelectItem value="finance">Finance</SelectItem>
+                <SelectItem value="entertainment">Entertainment</SelectItem>
+                <SelectItem value="education">Education</SelectItem>
+                <SelectItem value="general">General</SelectItem>
               </SelectContent>
             </Select>
             {errors.category && (
@@ -220,16 +232,19 @@ const ContextProfileForm = ({ onProfileSelect, onAnalyze, onSkip, isAnalyzing }:
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="current_role">Current Role</Label>
+            <Label htmlFor="role_description">Current Role *</Label>
             <Input
-              id="current_role"
+              id="role_description"
               placeholder="e.g., Founder, Runner, Doctor, Teacher"
-              {...register('current_role')}
+              {...register('role_description')}
             />
+            {errors.role_description && (
+              <p className="text-sm text-destructive">{errors.role_description.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="experience_level">Experience Level</Label>
+            <Label htmlFor="experience_level">Experience Level *</Label>
             <Select onValueChange={(value) => setValue('experience_level', value as any)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select your level" />
@@ -241,6 +256,9 @@ const ContextProfileForm = ({ onProfileSelect, onAnalyze, onSkip, isAnalyzing }:
                 <SelectItem value="expert">Expert</SelectItem>
               </SelectContent>
             </Select>
+            {errors.experience_level && (
+              <p className="text-sm text-destructive">{errors.experience_level.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -257,23 +275,31 @@ const ContextProfileForm = ({ onProfileSelect, onAnalyze, onSkip, isAnalyzing }:
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="challenges">Challenges</Label>
+            <Label htmlFor="challenges">Challenges *</Label>
             <Textarea
               id="challenges"
               placeholder="What obstacles are you facing?"
               rows={2}
               {...register('challenges')}
             />
+            {errors.challenges && (
+              <p className="text-sm text-destructive">{errors.challenges.message}</p>
+            )}
           </div>
 
-          {savedProfiles.length < 3 && (
+          {savedProfiles.length < (subscription?.profile_limit || 3) && (
             <div className="flex items-center space-x-2">
               <Switch
                 id="save-profile"
                 checked={saveAsProfile}
                 onCheckedChange={setSaveAsProfile}
               />
-              <Label htmlFor="save-profile">Save this profile for future use ({savedProfiles.length}/3)</Label>
+              <Label htmlFor="save-profile">
+                Save this profile for future use ({savedProfiles.length}/{subscription?.profile_limit || 3})
+                {subscription?.tier === 'free' && savedProfiles.length >= 2 && (
+                  <span className="text-primary ml-1">• Upgrade for 15 profiles</span>
+                )}
+              </Label>
             </div>
           )}
 

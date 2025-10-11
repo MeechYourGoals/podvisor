@@ -83,10 +83,10 @@ ${userProfile ? `
 USER CONTEXT:
 - Profile: ${userProfile.profile_name}
 - Category: ${userProfile.category}
-- Role: ${userProfile.current_role || 'Not specified'}
+- Role: ${userProfile.role_description}
+- Experience: ${userProfile.experience_level}
 - Goals: ${userProfile.goals}
-- Challenges: ${userProfile.challenges || 'Not specified'}
-${userProfile.context_details ? `Additional Context: ${JSON.stringify(userProfile.context_details)}` : ''}
+- Challenges: ${userProfile.challenges}
 ` : ''}
 
 INSTRUCTIONS:
@@ -209,7 +209,7 @@ INSTRUCTIONS:
     const { data: existingSource } = await supabase
       .from('content_sources')
       .select('id')
-      .eq('name', extractedData.source_name)
+      .eq('source_url', videoUrl)
       .single();
 
     let sourceId = existingSource?.id;
@@ -217,8 +217,9 @@ INSTRUCTIONS:
       const { data: newSource } = await supabase
         .from('content_sources')
         .insert({
-          name: extractedData.source_name,
-          source_type: extractedData.source_type || 'youtube_channel'
+          source_type: 'youtube',
+          source_url: videoUrl,
+          source_name: channelName
         })
         .select('id')
         .single();
@@ -236,23 +237,40 @@ INSTRUCTIONS:
     if (!expertId) {
       const { data: newExpert } = await supabase
         .from('experts')
-        .insert(extractedData.expert)
+        .insert({
+          name: extractedData.expert.name,
+          credentials: extractedData.expert.credentials,
+          domain: extractedData.expert.domain
+        })
         .select('id')
         .single();
       expertId = newExpert?.id;
     }
 
-    // 3. Create video record
+    // 3. Get user ID from auth header
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    const { data: { user } } = await supabase.auth.getUser(token || '');
+
+    if (!user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 4. Create video record
     const { data: video, error: videoError } = await supabase
       .from('videos')
       .insert({
+        user_id: user.id,
         title: videoTitle,
-        url: videoUrl,
-        platform: 'YouTube',
-        content_source_id: sourceId,
+        youtube_url: videoUrl,
+        video_id: videoId,
+        thumbnail_url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+        source_id: sourceId,
         expert_id: expertId,
-        expert_names: extractedData.expert.name,
-        analysis_status: 'completed'
+        status: 'completed'
       })
       .select('id')
       .single();
@@ -265,38 +283,42 @@ INSTRUCTIONS:
       );
     }
 
-    // 4. Insert insights
+    // 5. Insert insights
     const insightsToInsert = extractedData.insights.map((insight: any) => ({
       video_id: video.id,
+      category: insight.category?.toLowerCase().replace(/\s+/g, '_') || 'general',
       insight_text: insight.insight_text,
-      category: insight.category,
       impact_score: insight.impact_score,
-      actionability_score: insight.actionability_score,
-      expert_attribution: insight.expert_attribution
+      actionability_score: insight.actionability_score
     }));
 
-    const { data: insertedInsights, error: insightsError } = await supabase
+    const { error: insightsError } = await supabase
       .from('insights')
-      .insert(insightsToInsert)
-      .select('id');
+      .insert(insightsToInsert);
 
     if (insightsError) {
       console.error('Error inserting insights:', insightsError);
     }
 
-    // 5. Insert personalized insights if profile provided
+    // 6. Insert personalized insights if profile provided
     if (userProfile && extractedData.personalized_insights?.length > 0) {
-      const personalizedToInsert = extractedData.personalized_insights.map((pInsight: any, index: number) => ({
-        insight_id: insertedInsights?.[index]?.id,
+      const personalizedToInsert = extractedData.personalized_insights.map((pInsight: any) => ({
+        video_id: video.id,
         profile_id: profileId,
-        personalized_text: pInsight.personalized_text,
+        insight_text: pInsight.personalized_text,
         relevance_score: pInsight.relevance_score,
-        action_items: pInsight.action_items
+        action_items: pInsight.action_items?.map((a: any) => 
+          typeof a === 'string' ? a : `${a.action} (${a.timeline}, ${a.difficulty})`
+        ) || []
       }));
 
-      await supabase
+      const { error: personalizedError } = await supabase
         .from('personalized_insights')
         .insert(personalizedToInsert);
+
+      if (personalizedError) {
+        console.error('Error inserting personalized insights:', personalizedError);
+      }
     }
 
     return new Response(
