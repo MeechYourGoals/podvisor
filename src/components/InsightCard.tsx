@@ -43,7 +43,7 @@ const InsightCard = ({ insight, onBookmark, isBookmarked, actionItems }: Insight
     const colors: Record<string, string> = {
       strategy: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
       execution: 'bg-green-500/10 text-green-500 border-green-500/20',
-      mindset: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+      mindset: 'bg-red-500/10 text-red-500 border-red-500/20',
       technical: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
       nutrition: 'bg-pink-500/10 text-pink-500 border-pink-500/20',
       training: 'bg-red-500/10 text-red-500 border-red-500/20',
