@@ -1,0 +1,333 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { videoUrl, profileId } = await req.json();
+    
+    console.log('Analyzing video:', videoUrl, 'with profile:', profileId);
+
+    if (!videoUrl) {
+      return new Response(
+        JSON.stringify({ error: 'Video URL is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Extract YouTube video ID
+    const videoId = extractYouTubeId(videoUrl);
+    if (!videoId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid YouTube URL' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get video metadata from YouTube oEmbed
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+    const oembedResponse = await fetch(oembedUrl);
+    const oembedData = await oembedResponse.json();
+    
+    const videoTitle = oembedData.title;
+    const channelName = oembedData.author_name;
+
+    console.log('Video metadata:', { videoTitle, channelName });
+
+    // Get user profile if provided
+    let userProfile = null;
+    if (profileId) {
+      const { data } = await supabase
+        .from('user_context_profiles')
+        .select('*')
+        .eq('id', profileId)
+        .single();
+      userProfile = data;
+      console.log('User profile:', userProfile);
+    }
+
+    // Build AI prompt
+    const systemPrompt = `You are an expert at extracting actionable insights from expert videos across ALL domains - business, sports, health, education, creative, technology, finance, and personal development.
+
+Your task is to deeply analyze video content and extract comprehensive, actionable insights that can help someone improve in that domain.
+
+CRITICAL REQUIREMENTS:
+- Extract EXACTLY 10 tactical insights ranked by actionability (1-10) and impact (1-10)
+- Each insight must be 3-4 sentences with specific context and examples
+- Extract the expert's name, domain, credentials, and achievements
+- If user profile is provided, generate EXACTLY 5 personalized insights relevant to their context
+- Use actual data from the video - DO NOT provide mock or placeholder content
+- If you cannot access the video content, return an error`;
+
+    const userPrompt = `Analyze this video:
+URL: ${videoUrl}
+Title: ${videoTitle}
+Source: ${channelName}
+
+${userProfile ? `
+USER CONTEXT:
+- Profile: ${userProfile.profile_name}
+- Category: ${userProfile.category}
+- Role: ${userProfile.current_role || 'Not specified'}
+- Goals: ${userProfile.goals}
+- Challenges: ${userProfile.challenges || 'Not specified'}
+${userProfile.context_details ? `Additional Context: ${JSON.stringify(userProfile.context_details)}` : ''}
+` : ''}
+
+INSTRUCTIONS:
+1. Analyze the video content and extract real insights
+2. Identify the expert(s) and their domain/credentials
+3. Extract EXACTLY 10 tactical, actionable insights with specific context
+4. ${userProfile ? 'Generate EXACTLY 5 personalized insights tailored to the user\'s profile' : 'Skip personalized insights'}
+5. Rank insights by actionability (1-10) and impact (1-10)
+6. Include expert attribution for each insight
+7. Categorize insights (e.g., Strategy, Execution, Mindset, Technical, Nutrition, Training, etc.)`;
+
+    // Call Lovable AI with tool calling
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "extract_video_data",
+            description: "Extract structured data from expert video",
+            parameters: {
+              type: "object",
+              properties: {
+                source_name: { type: "string", description: "YouTube channel or series name" },
+                source_type: { type: "string", enum: ["youtube_channel", "podcast", "course", "conference"] },
+                expert: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    domain: { type: "string", description: "business, sports, health, education, creative, technology, finance, personal_development, other" },
+                    credentials: { type: "string" },
+                    current_role: { type: "string" },
+                    achievements: { type: "string" }
+                  },
+                  required: ["name", "domain"]
+                },
+                insights: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      insight_text: { type: "string", description: "3-4 sentences with specific context" },
+                      category: { type: "string" },
+                      impact_score: { type: "integer", minimum: 1, maximum: 10 },
+                      actionability_score: { type: "integer", minimum: 1, maximum: 10 },
+                      expert_attribution: { type: "string" }
+                    },
+                    required: ["insight_text", "impact_score", "actionability_score"]
+                  },
+                  minItems: 10,
+                  maxItems: 10
+                },
+                personalized_insights: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      personalized_text: { type: "string" },
+                      relevance_score: { type: "integer", minimum: 1, maximum: 10 },
+                      action_items: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            action: { type: "string" },
+                            timeline: { type: "string" },
+                            difficulty: { type: "string", enum: ["easy", "medium", "hard"] }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  minItems: 0,
+                  maxItems: 5
+                }
+              },
+              required: ["source_name", "expert", "insights"]
+            }
+          }
+        }],
+        tool_choice: { type: "function", function: { name: "extract_video_data" } }
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('AI API error:', aiResponse.status, errorText);
+      return new Response(
+        JSON.stringify({ error: 'Failed to analyze video with AI' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const aiData = await aiResponse.json();
+    console.log('AI response:', JSON.stringify(aiData, null, 2));
+
+    const toolCall = aiData.choices[0].message.tool_calls?.[0];
+    if (!toolCall) {
+      console.error('No tool call in AI response');
+      return new Response(
+        JSON.stringify({ error: 'AI did not provide structured data' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const extractedData = JSON.parse(toolCall.function.arguments);
+    console.log('Extracted data:', extractedData);
+
+    // Store in database
+    // 1. Create or find content source
+    const { data: existingSource } = await supabase
+      .from('content_sources')
+      .select('id')
+      .eq('name', extractedData.source_name)
+      .single();
+
+    let sourceId = existingSource?.id;
+    if (!sourceId) {
+      const { data: newSource } = await supabase
+        .from('content_sources')
+        .insert({
+          name: extractedData.source_name,
+          source_type: extractedData.source_type || 'youtube_channel'
+        })
+        .select('id')
+        .single();
+      sourceId = newSource?.id;
+    }
+
+    // 2. Create or find expert
+    const { data: existingExpert } = await supabase
+      .from('experts')
+      .select('id')
+      .eq('name', extractedData.expert.name)
+      .single();
+
+    let expertId = existingExpert?.id;
+    if (!expertId) {
+      const { data: newExpert } = await supabase
+        .from('experts')
+        .insert(extractedData.expert)
+        .select('id')
+        .single();
+      expertId = newExpert?.id;
+    }
+
+    // 3. Create video record
+    const { data: video, error: videoError } = await supabase
+      .from('videos')
+      .insert({
+        title: videoTitle,
+        url: videoUrl,
+        platform: 'YouTube',
+        content_source_id: sourceId,
+        expert_id: expertId,
+        expert_names: extractedData.expert.name,
+        analysis_status: 'completed'
+      })
+      .select('id')
+      .single();
+
+    if (videoError) {
+      console.error('Error creating video:', videoError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to save video' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 4. Insert insights
+    const insightsToInsert = extractedData.insights.map((insight: any) => ({
+      video_id: video.id,
+      insight_text: insight.insight_text,
+      category: insight.category,
+      impact_score: insight.impact_score,
+      actionability_score: insight.actionability_score,
+      expert_attribution: insight.expert_attribution
+    }));
+
+    const { data: insertedInsights, error: insightsError } = await supabase
+      .from('insights')
+      .insert(insightsToInsert)
+      .select('id');
+
+    if (insightsError) {
+      console.error('Error inserting insights:', insightsError);
+    }
+
+    // 5. Insert personalized insights if profile provided
+    if (userProfile && extractedData.personalized_insights?.length > 0) {
+      const personalizedToInsert = extractedData.personalized_insights.map((pInsight: any, index: number) => ({
+        insight_id: insertedInsights?.[index]?.id,
+        profile_id: profileId,
+        personalized_text: pInsight.personalized_text,
+        relevance_score: pInsight.relevance_score,
+        action_items: pInsight.action_items
+      }));
+
+      await supabase
+        .from('personalized_insights')
+        .insert(personalizedToInsert);
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        videoId: video.id,
+        insightCount: extractedData.insights.length,
+        personalizedCount: extractedData.personalized_insights?.length || 0
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error: any) {
+    console.error('Error in analyze-video:', error);
+    return new Response(
+      JSON.stringify({ error: error?.message || 'Unknown error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
+
+function extractYouTubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  
+  return null;
+}
