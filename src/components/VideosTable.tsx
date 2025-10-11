@@ -14,8 +14,10 @@ import {
   Link2, 
   Trash2,
   MoreVertical,
-  X
+  X,
+  Bookmark
 } from "lucide-react";
+import { BookmarkDialog } from "./BookmarkDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,7 +60,14 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
+  const [selectedVideoForBookmark, setSelectedVideoForBookmark] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const handleOpenBookmarkDialog = (videoId: string) => {
+    setSelectedVideoForBookmark(videoId);
+    setBookmarkDialogOpen(true);
+  };
 
   const loadVideos = async () => {
     try {
@@ -392,6 +401,13 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
                         <Link2 className="h-4 w-4" />
                         Copy Link
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleOpenBookmarkDialog(video.id)}
+                        className="gap-2"
+                      >
+                        <Bookmark className="h-4 w-4" />
+                        Bookmark
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         onClick={() => handleDelete(video.id)}
@@ -416,6 +432,13 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
           </p>
         </Card>
       )}
+
+      <BookmarkDialog
+        open={bookmarkDialogOpen}
+        onOpenChange={setBookmarkDialogOpen}
+        videoId={selectedVideoForBookmark || undefined}
+        type="video"
+      />
     </div>
   );
 };

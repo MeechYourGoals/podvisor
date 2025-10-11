@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Youtube, Download, Bookmark, ExternalLink } from 'lucide-react';
 import InsightCard from './InsightCard';
 import { useToast } from '@/hooks/use-toast';
+import { BookmarkDialog } from './BookmarkDialog';
 
 interface VideoDetailProps {
   videoId: string | null;
@@ -53,6 +54,7 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [personalizedInsights, setPersonalizedInsights] = useState<PersonalizedInsight[]>([]);
   const [loading, setLoading] = useState(false);
+  const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -135,30 +137,8 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
     }
   };
 
-  const handleBookmarkVideo = async () => {
-    if (!videoId) return;
-    try {
-      const { error } = await (supabase as any)
-        .from('bookmarked_videos')
-        .insert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          video_id: videoId,
-          folder_id: null,
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Bookmarked!",
-        description: "Video saved to your bookmarks",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+  const handleBookmarkVideo = () => {
+    setBookmarkDialogOpen(true);
   };
 
   const handleExport = () => {
@@ -352,6 +332,13 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
             </Tabs>
           )}
         </div>
+
+        <BookmarkDialog
+          open={bookmarkDialogOpen}
+          onOpenChange={setBookmarkDialogOpen}
+          videoId={videoId || undefined}
+          type="video"
+        />
       </SheetContent>
     </Sheet>
   );

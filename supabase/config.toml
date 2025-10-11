@@ -1,1 +1,13 @@
 project_id = "wnbybsgjdmguzviivpaj"
+
+[functions.analyze-video]
+verify_jwt = true
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+[functions.create-billing-portal-session]
+verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false

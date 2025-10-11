@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Bookmark, Copy, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { BookmarkDialog } from './BookmarkDialog';
 
 interface InsightCardProps {
   insight: {
@@ -21,7 +22,12 @@ interface InsightCardProps {
 
 const InsightCard = ({ insight, onBookmark, isBookmarked, actionItems }: InsightCardProps) => {
   const [copied, setCopied] = useState(false);
+  const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  const handleBookmark = () => {
+    setBookmarkDialogOpen(true);
+  };
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(insight.insight_text);
@@ -68,7 +74,7 @@ const InsightCard = ({ insight, onBookmark, isBookmarked, actionItems }: Insight
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => onBookmark(insight.id)}
+              onClick={handleBookmark}
               className="h-8 w-8 p-0"
             >
               <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-current' : ''}`} />
@@ -110,6 +116,13 @@ const InsightCard = ({ insight, onBookmark, isBookmarked, actionItems }: Insight
             </ul>
           </div>
         )}
+
+        <BookmarkDialog
+          open={bookmarkDialogOpen}
+          onOpenChange={setBookmarkDialogOpen}
+          insightId={insight.id}
+          type="insight"
+        />
       </CardContent>
     </Card>
   );

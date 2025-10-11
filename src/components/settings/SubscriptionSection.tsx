@@ -4,12 +4,58 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Crown, Zap } from 'lucide-react';
+import { Loader2, Crown, Zap, ExternalLink } from 'lucide-react';
 
 export const SubscriptionSection = () => {
   const [subscription, setSubscription] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isManaging, setIsManaging] = useState(false);
   const { toast } = useToast();
+
+  const handleUpgrade = async (tier: 'pro' | 'team') => {
+    setIsUpgrading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: { tier },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create checkout session",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    setIsManaging(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-billing-portal-session');
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to open billing portal",
+        variant: "destructive",
+      });
+    } finally {
+      setIsManaging(false);
+    }
+  };
 
   useEffect(() => {
     loadSubscription();
@@ -100,15 +146,45 @@ export const SubscriptionSection = () => {
               </ul>
             </div>
           </div>
-          <Button className="w-full" variant="default">
-            Upgrade Now
+          <Button
+            className="w-full"
+            variant="default"
+            onClick={() => handleUpgrade('pro')}
+            disabled={isUpgrading}
+          >
+            {isUpgrading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Upgrade Now
+              </>
+            )}
           </Button>
         </div>
       )}
 
       {subscription.tier !== 'free' && (
-        <Button variant="outline" className="w-full">
-          Manage Subscription
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleManageSubscription}
+          disabled={isManaging}
+        >
+          {isManaging ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading...
+            </>
+          ) : (
+            <>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Manage Subscription
+            </>
+          )}
         </Button>
       )}
     </div>

@@ -4,13 +4,24 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ProfileFormDialog } from '../ProfileFormDialog';
 
 export const SavedProfilesSection = () => {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const { toast } = useToast();
-  const navigate = useNavigate();
+
+  const handleNewProfile = () => {
+    setSelectedProfile(null);
+    setDialogOpen(true);
+  };
+
+  const handleEditProfile = (profile: any) => {
+    setSelectedProfile(profile);
+    setDialogOpen(true);
+  };
 
   useEffect(() => {
     loadProfiles();
@@ -79,7 +90,7 @@ export const SavedProfilesSection = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-base font-semibold">Saved Profiles</h3>
-        <Button size="sm" variant="outline">
+        <Button size="sm" variant="outline" onClick={handleNewProfile}>
           <Plus className="h-4 w-4 mr-1" />
           New
         </Button>
@@ -104,7 +115,12 @@ export const SavedProfilesSection = () => {
                   </Badge>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" className="h-8 w-8">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
+                    onClick={() => handleEditProfile(profile)}
+                  >
                     <Pencil className="h-3 w-3" />
                   </Button>
                   <Button
@@ -124,6 +140,13 @@ export const SavedProfilesSection = () => {
           ))}
         </div>
       )}
+
+      <ProfileFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        profile={selectedProfile}
+        onSuccess={loadProfiles}
+      />
     </div>
   );
 };

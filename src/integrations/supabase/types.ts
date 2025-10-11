@@ -134,6 +134,42 @@ export type Database = {
           },
         ]
       }
+      bookmarked_videos_folders: {
+        Row: {
+          bookmarked_video_id: string
+          created_at: string | null
+          folder_id: string
+          id: string
+        }
+        Insert: {
+          bookmarked_video_id: string
+          created_at?: string | null
+          folder_id: string
+          id?: string
+        }
+        Update: {
+          bookmarked_video_id?: string
+          created_at?: string | null
+          folder_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmarked_videos_folders_bookmarked_video_id_fkey"
+            columns: ["bookmarked_video_id"]
+            isOneToOne: false
+            referencedRelation: "bookmarked_videos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmarked_videos_folders_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "bookmark_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_sources: {
         Row: {
           created_at: string | null
@@ -271,6 +307,36 @@ export type Database = {
           },
         ]
       }
+      stripe_products: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          interval: string
+          stripe_price_id: string
+          stripe_product_id: string
+          tier: Database["public"]["Enums"]["subscription_tier"]
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          interval?: string
+          stripe_price_id: string
+          stripe_product_id: string
+          tier: Database["public"]["Enums"]["subscription_tier"]
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          interval?: string
+          stripe_price_id?: string
+          stripe_product_id?: string
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+        }
+        Relationships: []
+      }
       user_context_profiles: {
         Row: {
           category: Database["public"]["Enums"]["profile_category"]
@@ -334,11 +400,41 @@ export type Database = {
         }
         Relationships: []
       }
+      user_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          display_name: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_subscriptions: {
         Row: {
           created_at: string | null
+          current_period_end: string | null
           id: string
           profile_limit: number | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           tier: Database["public"]["Enums"]["subscription_tier"] | null
           updated_at: string | null
           user_id: string | null
@@ -347,8 +443,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          current_period_end?: string | null
           id?: string
           profile_limit?: number | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           tier?: Database["public"]["Enums"]["subscription_tier"] | null
           updated_at?: string | null
           user_id?: string | null
@@ -357,8 +456,11 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          current_period_end?: string | null
           id?: string
           profile_limit?: number | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           tier?: Database["public"]["Enums"]["subscription_tier"] | null
           updated_at?: string | null
           user_id?: string | null
@@ -444,7 +546,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_video_count: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       profile_category:
