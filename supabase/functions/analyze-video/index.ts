@@ -277,8 +277,8 @@ CRITICAL FORMATTING:
 - Use specific numbers, frameworks, and examples from the video
 - Make insights tactical and immediately actionable`;
 
-    // Call Lovable AI with tool calling
-    console.log('[analyze-video] Calling Lovable AI API');
+    // Call Lovable AI without tool calling (Phase 0 hotfix to avoid Gemini schema errors)
+    console.log('[analyze-video] Calling Lovable AI API (no-tools mode)');
     
     // Adaptive model selection based on transcript length
     const model = transcript.length > 12000 ? 'google/gemini-2.5-pro' : 'google/gemini-2.5-flash';
@@ -294,100 +294,8 @@ CRITICAL FORMATTING:
         model,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "extract_video_data",
-            description: "Extract structured data from expert video",
-            parameters: {
-              type: "object",
-              properties: {
-                source_name: { type: "string", description: "YouTube channel or series name" },
-                source_type: { type: "string", enum: ["youtube_channel", "podcast", "course", "conference"] },
-                expert: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string" },
-                    domain: { type: "string", description: "business, sports, health, education, creative, technology, finance, personal_development, other" },
-                    credentials: { type: "string" },
-                    current_role: { type: "string" },
-                    achievements: { type: "string" }
-                  },
-                  required: ["name", "domain"]
-                },
-                speakers: {
-                  type: "array",
-                  description: "Array of speakers with their roles. Identify PRIMARY speakers (interviewees/guests) vs hosts. For interviews, focus on the person being interviewed, not the host.",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string", description: "Full name of the speaker" },
-                      role: { type: "string", enum: ["interviewee", "host", "panelist", "guest"], description: "Role of the speaker" }
-                    },
-                    required: ["name", "role"]
-                  },
-                  minItems: 1
-                },
-                tags: {
-                  type: "array",
-                  description: "3-7 smart tags for categorization (e.g., 'Psychology', 'Interview', 'Leadership')",
-                  items: { type: "string" },
-                  minItems: 3,
-                  maxItems: 7
-                },
-                insights: {
-                  type: "array",
-                  description: "EXACTLY 10 universal insights",
-                  items: {
-                    type: "object",
-                    properties: {
-                      insight_text: { type: "string", description: "4-5 sentences with specific examples and context. Must end with expert attribution: — [Speaker Name]" },
-                      category: { 
-                        type: "string", 
-                        enum: ["business", "sports", "health_fitness", "technology", "personal_development", "finance", "entertainment", "education", "general"],
-                        description: "MUST be one of: business, sports, health_fitness, technology, personal_development, finance, entertainment, education, general"
-                      },
-                      impact_score: { type: "integer", minimum: 1, maximum: 10 },
-                      actionability_score: { type: "integer", minimum: 1, maximum: 10 },
-                      expert_attribution: { type: "string", description: "Speaker name only, e.g., 'Jordan Peterson'" }
-                    },
-                    required: ["insight_text", "category", "impact_score", "actionability_score", "expert_attribution"]
-                  },
-                  minItems: 10,
-                  maxItems: 10
-                },
-                personalized_insights: {
-                  type: "array",
-                  description: "EXACTLY 10 personalized insights if profile provided, otherwise 0",
-                  items: {
-                    type: "object",
-                    properties: {
-                      for_profile_context: { type: "string", description: "Opening line: 'For Your [Profile Name]:' followed by 1-2 sentence bridge" },
-                      insight_text: { type: "string", description: "4-5 sentence paragraph connecting lesson to user's specific context" },
-                      action_items: {
-                        type: "array",
-                        description: "EXACTLY 3 numbered action items",
-                        items: { type: "string", description: "Full action description with timeline and success metrics" },
-                        minItems: 3,
-                        maxItems: 3
-                      },
-                      relevance_score: { type: "integer", minimum: 1, maximum: 10 },
-                      impact_score: { type: "integer", minimum: 1, maximum: 10 },
-                      actionability_score: { type: "integer", minimum: 1, maximum: 10 }
-                    },
-                    required: ["for_profile_context", "insight_text", "action_items", "relevance_score", "impact_score", "actionability_score"]
-                  },
-                  minItems: 0,
-                  maxItems: 10
-                }
-              },
-              required: ["source_name", "expert", "speakers", "tags", "insights"]
-            }
-          }
-        }],
-        tool_choice: { type: "function", function: { name: "extract_video_data" } }
+          { role: 'user', content: userPrompt + '\n\nIMPORTANT: Return valid JSON with this exact structure:\n{"source_name": "...", "expert": {"name": "...", "domain": "..."}, "speakers": [...], "tags": [...], "insights": [...], "personalized_insights": [...]}' }
+        ]
       }),
     });
 
@@ -439,7 +347,7 @@ CRITICAL FORMATTING:
       );
     }
 
-    // Defensive parsing of AI response
+    // Defensive parsing of AI response (no-tools mode)
     const choice0 = aiData.choices?.[0];
     if (!choice0) {
       console.error('[analyze-video] No choices in AI response');
@@ -453,61 +361,62 @@ CRITICAL FORMATTING:
     }
 
     const msg = choice0.message || {};
-    const toolCalls = msg.tool_calls || (msg.function_call ? [{ type: 'function', function: msg.function_call }] : []);
-    
     let extractedData: any;
     
-    if (toolCalls.length > 0) {
-      const toolCall = toolCalls[0];
+    // Parse JSON from content (no tool calls in Phase 0)
+    console.log('[analyze-video] Parsing JSON from content');
+    const content = msg.content || '';
+    
+    // Try to find JSON in fenced code block first
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
       try {
-        extractedData = typeof toolCall.function?.arguments === 'string' 
-          ? JSON.parse(toolCall.function.arguments)
-          : toolCall.function?.arguments || toolCall.arguments;
+        extractedData = JSON.parse(jsonMatch[1]);
+        console.log('[analyze-video] Parsed JSON from code fence');
       } catch (e) {
-        console.error('[analyze-video] Failed to parse tool call arguments:', e);
+        console.log('[analyze-video] Failed to parse JSON from code block, trying raw content');
+      }
+    }
+    
+    // Fallback: try parsing entire content as JSON
+    if (!extractedData) {
+      try {
+        extractedData = JSON.parse(content);
+        console.log('[analyze-video] Parsed JSON from raw content');
+      } catch (e) {
+        console.error('[analyze-video] Failed to parse content as JSON:', e);
         return new Response(
           JSON.stringify({ 
-            error: 'Failed to parse AI response data',
-            error_code: 'AI_INVALID_STRUCTURE'
+            error: 'AI returned unstructured data',
+            error_code: 'AI_NO_TOOL_CALL'
           }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         );
-      }
-    } else {
-      // Attempt to extract JSON from content
-      console.log('[analyze-video] No tool call, attempting to parse content');
-      const content = msg.content || '';
-      
-      // Try to find JSON in fenced code block
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        try {
-          extractedData = JSON.parse(jsonMatch[1]);
-        } catch (e) {
-          console.error('[analyze-video] Failed to parse JSON from code block');
-        }
-      }
-      
-      // Fallback: try parsing entire content
-      if (!extractedData) {
-        try {
-          extractedData = JSON.parse(content);
-        } catch (e) {
-          console.error('[analyze-video] Failed to parse content as JSON');
-          return new Response(
-            JSON.stringify({ 
-              error: 'AI returned unstructured data',
-              error_code: 'AI_NO_TOOL_CALL'
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-          );
-        }
       }
     }
 
-    // Validate minimum structure
-    if (!extractedData.insights || !Array.isArray(extractedData.insights) || extractedData.insights.length === 0) {
-      console.error('[analyze-video] Invalid insights structure');
+    // Validate and sanitize extracted data with clamps
+    console.log('[analyze-video] Raw data before sanitization:', {
+      insightsCount: extractedData.insights?.length,
+      personalizedCount: extractedData.personalized_insights?.length
+    });
+    
+    // Helper: coerce score to 1-10 range
+    const coerceScore = (val: any, defaultVal = 7): number => {
+      const num = parseInt(val, 10);
+      if (isNaN(num)) return defaultVal;
+      return Math.max(1, Math.min(10, num));
+    };
+    
+    // Helper: extract expert name from "— Name" pattern if missing
+    const extractExpertName = (text: string, fallback: string): string => {
+      const match = text.match(/—\s*([^—\n]+?)(?:\n|$)/);
+      return match ? match[1].trim() : fallback;
+    };
+    
+    // Clamp and sanitize insights array
+    if (!Array.isArray(extractedData.insights)) {
+      console.error('[analyze-video] insights is not an array');
       return new Response(
         JSON.stringify({ 
           error: 'AI returned invalid insights structure',
@@ -517,11 +426,49 @@ CRITICAL FORMATTING:
       );
     }
     
-    console.log('[analyze-video] Extracted data:', { 
-      insightsCount: extractedData.insights?.length,
-      personalizedCount: extractedData.personalized_insights?.length,
-      speakersCount: extractedData.speakers?.length,
-      tagsCount: extractedData.tags?.length 
+    // Clamp to max 10 insights
+    extractedData.insights = extractedData.insights.slice(0, 10).map((insight: any) => {
+      const sanitized: any = {
+        insight_text: (insight.insight_text || '').trim(),
+        category: (insight.category || 'general').toLowerCase().replace(/\s+/g, '_'),
+        impact_score: coerceScore(insight.impact_score),
+        actionability_score: coerceScore(insight.actionability_score),
+        expert_attribution: insight.expert_attribution || extractExpertName(insight.insight_text || '', channelName)
+      };
+      return sanitized;
+    });
+    
+    // Clamp and sanitize personalized insights if present
+    if (Array.isArray(extractedData.personalized_insights)) {
+      extractedData.personalized_insights = extractedData.personalized_insights.slice(0, 10).map((pInsight: any) => {
+        // Ensure action_items is array with up to 3 items
+        let actionItems = Array.isArray(pInsight.action_items) ? pInsight.action_items : [];
+        actionItems = actionItems.slice(0, 3).map((item: any) => String(item).trim());
+        
+        return {
+          for_profile_context: (pInsight.for_profile_context || '').trim(),
+          insight_text: (pInsight.insight_text || '').trim(),
+          action_items: actionItems,
+          relevance_score: coerceScore(pInsight.relevance_score),
+          impact_score: coerceScore(pInsight.impact_score),
+          actionability_score: coerceScore(pInsight.actionability_score)
+        };
+      });
+    } else {
+      extractedData.personalized_insights = [];
+    }
+    
+    // Ensure other required fields have defaults
+    extractedData.source_name = extractedData.source_name || channelName;
+    extractedData.expert = extractedData.expert || { name: channelName, domain: 'general' };
+    extractedData.speakers = Array.isArray(extractedData.speakers) ? extractedData.speakers : [{ name: channelName, role: 'host' }];
+    extractedData.tags = Array.isArray(extractedData.tags) ? extractedData.tags.slice(0, 7) : [];
+    
+    console.log('[analyze-video] Sanitized data:', { 
+      insightsCount: extractedData.insights.length,
+      personalizedCount: extractedData.personalized_insights.length,
+      speakersCount: extractedData.speakers.length,
+      tagsCount: extractedData.tags.length 
     });
 
     // Store in database
@@ -665,16 +612,16 @@ CRITICAL FORMATTING:
       video = newVideo;
     }
 
-    // 5. Insert insights with flexible validation
+    // 5. Insert insights with defensive validation
     console.log('[analyze-video] Inserting general insights');
     const validCategories = ['business', 'sports', 'health_fitness', 'technology', 'personal_development', 'finance', 'entertainment', 'education', 'general'];
     
     const insightsToInsert = extractedData.insights.map((insight: any) => {
-      let category = insight.category?.toLowerCase().replace(/\s+/g, '_') || 'general';
+      let category = insight.category || 'general';
       
-      // Flexible category normalization - always succeed with "general" fallback
+      // Normalize category to valid enum value (already done in sanitization, but double-check)
       if (!validCategories.includes(category)) {
-        console.log(`[analyze-video] Category "${insight.category}" not in predefined list, using "general" (this is expected and safe)`);
+        console.log(`[analyze-video] Category "${category}" normalized to "general"`);
         category = 'general';
       }
       
@@ -773,11 +720,11 @@ CRITICAL FORMATTING:
     } else if (transcriptSource === 'perplexity') {
       warnings.push('Analysis generated using AI fallback method');
     }
-    if (finalInsightCount < 8) {
-      warnings.push('Partial insights generated - some may have failed to save');
+    if (finalInsightCount < 10) {
+      warnings.push(`Generated ${finalInsightCount} insights (target: 10)`);
     }
-    if (userProfile && personalizedCount < 8) {
-      warnings.push('Partial personalized insights - some may have failed to save');
+    if (userProfile && personalizedCount < 10) {
+      warnings.push(`Generated ${personalizedCount} personalized insights (target: 10)`);
     }
     
     return new Response(
