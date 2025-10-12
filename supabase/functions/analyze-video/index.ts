@@ -8,6 +8,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Score clamping helper (same as Startup Advisor)
+const clampScore = (val: any): number => Math.max(1, Math.min(10, Math.round(Number(val) || 7)));
+
 // Fallback transcript fetcher using YouTube's timedtext API
 async function fetchTimedTextTranscript(videoId: string): Promise<string> {
   const langs = ['en-US', 'en', 'en-GB'];
@@ -277,8 +280,8 @@ CRITICAL FORMATTING:
 - Use specific numbers, frameworks, and examples from the video
 - Make insights tactical and immediately actionable`;
 
-    // Call Lovable AI without tool calling (Phase 0 hotfix to avoid Gemini schema errors)
-    console.log('[analyze-video] Calling Lovable AI API (no-tools mode)');
+    // Call Lovable AI with tool calling (Startup Advisor pattern)
+    console.log('[analyze-video] Calling Lovable AI API with tool calling');
     
     // Adaptive model selection based on transcript length
     const model = transcript.length > 12000 ? 'google/gemini-2.5-pro' : 'google/gemini-2.5-flash';
@@ -294,8 +297,76 @@ CRITICAL FORMATTING:
         model,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt + '\n\nIMPORTANT: Return valid JSON with this exact structure:\n{"source_name": "...", "expert": {"name": "...", "domain": "..."}, "speakers": [...], "tags": [...], "insights": [...], "personalized_insights": [...]}' }
-        ]
+          { role: 'user', content: userPrompt }
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "extract_video_insights",
+              description: "Extract structured insights from video content",
+              parameters: {
+                type: "object",
+                properties: {
+                  source_name: { type: "string" },
+                  expert: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      domain: { type: "string" }
+                    },
+                    required: ["name"]
+                  },
+                  speakers: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        role: { type: "string" }
+                      }
+                    }
+                  },
+                  tags: { type: "array", items: { type: "string" } },
+                  insights: {
+                    type: "array",
+                    description: "Exactly 10 universal insights",
+                    minItems: 10,
+                    maxItems: 10,
+                    items: {
+                      type: "object",
+                      properties: {
+                        insight_text: { type: "string" },
+                        impact_score: { type: "integer", minimum: 1, maximum: 10 },
+                        actionability_score: { type: "integer", minimum: 1, maximum: 10 },
+                        category: { type: "string" },
+                        expert_attribution: { type: "string" }
+                      },
+                      required: ["insight_text", "impact_score", "actionability_score", "category"]
+                    }
+                  },
+                  personalized_insights: {
+                    type: "array",
+                    description: "Exactly 10 personalized insights if profile provided",
+                    items: {
+                      type: "object",
+                      properties: {
+                        for_profile_context: { type: "string" },
+                        insight_text: { type: "string" },
+                        relevance_score: { type: "integer", minimum: 1, maximum: 10 },
+                        action_items: { type: "array", items: { type: "string" } }
+                      },
+                      required: ["insight_text"]
+                    }
+                  }
+                },
+                required: ["insights"],
+                additionalProperties: false
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "extract_video_insights" } }
       }),
     });
 
@@ -335,140 +406,118 @@ CRITICAL FORMATTING:
     const aiData = await aiResponse.json();
     console.log('[analyze-video] AI response received');
     
-    // Check for AI error in response
-    if (aiData.error) {
-      console.error('[analyze-video] AI returned error:', aiData.error);
+    // Extract from tool calls (Startup Advisor pattern)
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall) {
+      console.error('[analyze-video] No tool call in response:', aiData);
       return new Response(
         JSON.stringify({ 
-          error: aiData.error.message || 'AI processing error',
-          error_code: 'AI_GATEWAY_ERROR'
+          error: 'AI did not return structured data. Please try again.',
+          error_code: 'AI_NO_TOOL_CALL'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
-    // Defensive parsing of AI response (no-tools mode)
-    const choice0 = aiData.choices?.[0];
-    if (!choice0) {
-      console.error('[analyze-video] No choices in AI response');
-      return new Response(
-        JSON.stringify({ 
-          error: 'AI returned no choices',
-          error_code: 'AI_NO_CHOICES'
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
-
-    const msg = choice0.message || {};
     let extractedData: any;
-    
-    // Parse JSON from content (no tool calls in Phase 0)
-    console.log('[analyze-video] Parsing JSON from content');
-    const content = msg.content || '';
-    
-    // Try to find JSON in fenced code block first
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      try {
-        extractedData = JSON.parse(jsonMatch[1]);
-        console.log('[analyze-video] Parsed JSON from code fence');
-      } catch (e) {
-        console.log('[analyze-video] Failed to parse JSON from code block, trying raw content');
-      }
-    }
-    
-    // Fallback: try parsing entire content as JSON
-    if (!extractedData) {
-      try {
-        extractedData = JSON.parse(content);
-        console.log('[analyze-video] Parsed JSON from raw content');
-      } catch (e) {
-        console.error('[analyze-video] Failed to parse content as JSON:', e);
-        return new Response(
-          JSON.stringify({ 
-            error: 'AI returned unstructured data',
-            error_code: 'AI_NO_TOOL_CALL'
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        );
-      }
-    }
-
-    // Validate and sanitize extracted data with clamps
-    console.log('[analyze-video] Raw data before sanitization:', {
-      insightsCount: extractedData.insights?.length,
-      personalizedCount: extractedData.personalized_insights?.length
-    });
-    
-    // Helper: coerce score to 1-10 range
-    const coerceScore = (val: any, defaultVal = 7): number => {
-      const num = parseInt(val, 10);
-      if (isNaN(num)) return defaultVal;
-      return Math.max(1, Math.min(10, num));
-    };
-    
-    // Helper: extract expert name from "— Name" pattern if missing
-    const extractExpertName = (text: string, fallback: string): string => {
-      const match = text.match(/—\s*([^—\n]+?)(?:\n|$)/);
-      return match ? match[1].trim() : fallback;
-    };
-    
-    // Clamp and sanitize insights array
-    if (!Array.isArray(extractedData.insights)) {
-      console.error('[analyze-video] insights is not an array');
+    try {
+      extractedData = JSON.parse(toolCall.function.arguments);
+      console.log('[analyze-video] Parsed analysis from tool call:', {
+        insightCount: extractedData.insights?.length,
+        personalizedCount: extractedData.personalized_insights?.length
+      });
+    } catch (parseError) {
+      console.error('[analyze-video] Error parsing tool call arguments:', parseError);
       return new Response(
         JSON.stringify({ 
-          error: 'AI returned invalid insights structure',
+          error: 'AI returned invalid JSON structure.',
           error_code: 'AI_INVALID_STRUCTURE'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
-    
-    // Clamp to max 10 insights
-    extractedData.insights = extractedData.insights.slice(0, 10).map((insight: any) => {
-      const sanitized: any = {
-        insight_text: (insight.insight_text || '').trim(),
-        category: (insight.category || 'general').toLowerCase().replace(/\s+/g, '_'),
-        impact_score: coerceScore(insight.impact_score),
-        actionability_score: coerceScore(insight.actionability_score),
-        expert_attribution: insight.expert_attribution || extractExpertName(insight.insight_text || '', channelName)
+
+    // Validate structure
+    if (!extractedData.insights || !Array.isArray(extractedData.insights)) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'AI did not return insights array.',
+          error_code: 'AI_INVALID_STRUCTURE'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+
+    // Normalize insights data (clamp to max 10)
+    const normalizedInsights = extractedData.insights.slice(0, 10).map((insight: any) => {
+      // Extract expert name from text if not provided
+      let expertName = insight.expert_attribution || extractedData.expert?.name || channelName;
+      if (!expertName && insight.insight_text) {
+        const match = insight.insight_text.match(/—\s*(.+)$/);
+        if (match) expertName = match[1].trim();
+      }
+      
+      // Normalize category to lowercase snake_case
+      let category = (insight.category || 'general')
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '');
+      
+      // Map to known categories or default to "general"
+      const validCategories = [
+        'business', 'sports', 'health_fitness', 'technology',
+        'personal_development', 'finance', 'entertainment', 'education', 'general'
+      ];
+      if (!validCategories.includes(category)) {
+        console.log(`[analyze-video] Category "${insight.category}" not in list, defaulting to "general"`);
+        category = 'general';
+      }
+      
+      return {
+        insight_text: insight.insight_text,
+        impact_score: clampScore(insight.impact_score),
+        actionability_score: clampScore(insight.actionability_score),
+        category: category,
+        expert_attribution: expertName
       };
-      return sanitized;
     });
     
-    // Clamp and sanitize personalized insights if present
-    if (Array.isArray(extractedData.personalized_insights)) {
-      extractedData.personalized_insights = extractedData.personalized_insights.slice(0, 10).map((pInsight: any) => {
-        // Ensure action_items is array with up to 3 items
-        let actionItems = Array.isArray(pInsight.action_items) ? pInsight.action_items : [];
-        actionItems = actionItems.slice(0, 3).map((item: any) => String(item).trim());
+    // Normalize personalized insights if present (clamp to max 10)
+    let normalizedPersonalized: any[] = [];
+    if (userProfile && extractedData.personalized_insights && Array.isArray(extractedData.personalized_insights)) {
+      normalizedPersonalized = extractedData.personalized_insights.slice(0, 10).map((pi: any) => {
+        // Ensure action_items is an array with max 3 items
+        let actionItems: string[] = [];
+        if (Array.isArray(pi.action_items)) {
+          actionItems = pi.action_items.slice(0, 3);
+        } else if (typeof pi.action_items === 'string') {
+          // If AI returned string, try to split by newlines/numbers
+          actionItems = pi.action_items
+            .split(/\n+/)
+            .filter((item: string) => item.trim())
+            .slice(0, 3);
+        }
         
         return {
-          for_profile_context: (pInsight.for_profile_context || '').trim(),
-          insight_text: (pInsight.insight_text || '').trim(),
-          action_items: actionItems,
-          relevance_score: coerceScore(pInsight.relevance_score),
-          impact_score: coerceScore(pInsight.impact_score),
-          actionability_score: coerceScore(pInsight.actionability_score)
+          for_profile_context: pi.for_profile_context || `For Your ${userProfile.profile_name}`,
+          insight_text: pi.insight_text,
+          relevance_score: clampScore(pi.relevance_score),
+          action_items: actionItems
         };
       });
-    } else {
-      extractedData.personalized_insights = [];
     }
     
     // Ensure other required fields have defaults
-    extractedData.source_name = extractedData.source_name || channelName;
-    extractedData.expert = extractedData.expert || { name: channelName, domain: 'general' };
-    extractedData.speakers = Array.isArray(extractedData.speakers) ? extractedData.speakers : [{ name: channelName, role: 'host' }];
-    extractedData.tags = Array.isArray(extractedData.tags) ? extractedData.tags.slice(0, 7) : [];
+    const source_name = extractedData.source_name || channelName;
+    const expert = extractedData.expert || { name: channelName, domain: 'general' };
+    const speakers = Array.isArray(extractedData.speakers) ? extractedData.speakers : [{ name: channelName, role: 'host' }];
+    const tags = Array.isArray(extractedData.tags) ? extractedData.tags.slice(0, 7) : [];
     
-    console.log('[analyze-video] Sanitized data:', { 
-      insightsCount: extractedData.insights.length,
-      personalizedCount: extractedData.personalized_insights.length,
-      speakersCount: extractedData.speakers.length,
-      tagsCount: extractedData.tags.length 
+    console.log('[analyze-video] Normalized data:', { 
+      insightsCount: normalizedInsights.length,
+      personalizedCount: normalizedPersonalized.length,
+      speakersCount: speakers.length,
+      tagsCount: tags.length 
     });
 
     // Store in database
@@ -487,7 +536,7 @@ CRITICAL FORMATTING:
         .insert({
           source_type: 'youtube',
           source_url: videoUrl,
-          source_name: channelName
+          source_name: source_name
         })
         .select('id')
         .single();
@@ -499,7 +548,7 @@ CRITICAL FORMATTING:
     const { data: existingExpert } = await supabase
       .from('experts')
       .select('id')
-      .eq('name', extractedData.expert.name)
+      .eq('name', expert.name)
       .single();
 
     let expertId = existingExpert?.id;
@@ -507,9 +556,9 @@ CRITICAL FORMATTING:
       const { data: newExpert } = await supabase
         .from('experts')
         .insert({
-          name: extractedData.expert.name,
-          credentials: extractedData.expert.credentials,
-          domain: extractedData.expert.domain
+          name: expert.name,
+          credentials: expert.credentials,
+          domain: expert.domain
         })
         .select('id')
         .single();
@@ -562,8 +611,8 @@ CRITICAL FORMATTING:
           profile_used: profileUsed,
           source_id: sourceId,
           expert_id: expertId,
-          speakers: extractedData.speakers || [],
-          tags: extractedData.tags || [],
+          speakers: speakers,
+          tags: tags,
         })
         .eq('id', existingVideoId)
         .select('id')
@@ -594,8 +643,8 @@ CRITICAL FORMATTING:
           expert_id: expertId,
           status: 'completed',
           profile_used: profileUsed,
-          speakers: extractedData.speakers || [],
-          tags: extractedData.tags || [],
+          speakers: speakers,
+          tags: tags,
           is_favorite: false
         })
         .select('id')
@@ -612,29 +661,18 @@ CRITICAL FORMATTING:
       video = newVideo;
     }
 
-    // 5. Insert insights with defensive validation
+    // 5. Insert insights
     console.log('[analyze-video] Inserting general insights');
-    const validCategories = ['business', 'sports', 'health_fitness', 'technology', 'personal_development', 'finance', 'entertainment', 'education', 'general'];
     
-    const insightsToInsert = extractedData.insights.map((insight: any) => {
-      let category = insight.category || 'general';
-      
-      // Normalize category to valid enum value (already done in sanitization, but double-check)
-      if (!validCategories.includes(category)) {
-        console.log(`[analyze-video] Category "${category}" normalized to "general"`);
-        category = 'general';
-      }
-      
-      return {
-        video_id: video.id,
-        category,
-        insight_text: insight.insight_text,
-        impact_score: insight.impact_score,
-        actionability_score: insight.actionability_score,
-        expert_attribution: insight.expert_attribution,
-        profile_used: profileUsed
-      };
-    });
+    const insightsToInsert = normalizedInsights.map((insight: any) => ({
+      video_id: video.id,
+      category: insight.category,
+      insight_text: insight.insight_text,
+      impact_score: insight.impact_score,
+      actionability_score: insight.actionability_score,
+      expert_attribution: insight.expert_attribution,
+      profile_used: profileUsed
+    }));
 
     const { error: insightsError } = await supabase
       .from('insights')
@@ -663,14 +701,14 @@ CRITICAL FORMATTING:
     console.log('[analyze-video] Inserting personalized insights');
     let personalizedCount = 0;
     
-    if (userProfile && extractedData.personalized_insights?.length > 0) {
-      const personalizedToInsert = extractedData.personalized_insights.map((pInsight: any) => ({
+    if (userProfile && normalizedPersonalized.length > 0) {
+      const personalizedToInsert = normalizedPersonalized.map((pInsight: any) => ({
         video_id: video.id,
         profile_id: profileId,
         for_profile_context: pInsight.for_profile_context,
         insight_text: pInsight.insight_text,
         relevance_score: pInsight.relevance_score,
-        action_items: Array.isArray(pInsight.action_items) ? pInsight.action_items : [],
+        action_items: pInsight.action_items,
         profile_used: profileUsed
       }));
 
@@ -715,16 +753,17 @@ CRITICAL FORMATTING:
     
     // Build warnings array
     const warnings = [];
-    if (transcriptSource === 'metadata-only') {
-      warnings.push('Analysis based on metadata only - transcript unavailable');
-    } else if (transcriptSource === 'perplexity') {
-      warnings.push('Analysis generated using AI fallback method');
-    }
     if (finalInsightCount < 10) {
       warnings.push(`Generated ${finalInsightCount} insights (target: 10)`);
     }
     if (userProfile && personalizedCount < 10) {
       warnings.push(`Generated ${personalizedCount} personalized insights (target: 10)`);
+    }
+    if (transcriptSource === 'perplexity') {
+      warnings.push('Used AI analysis fallback (transcript unavailable)');
+    }
+    if (transcriptSource === 'metadata-only') {
+      warnings.push('Limited analysis - metadata only (no transcript available)');
     }
     
     return new Response(
