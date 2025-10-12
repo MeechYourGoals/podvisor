@@ -271,7 +271,11 @@ CRITICAL FORMATTING:
                     type: "object",
                     properties: {
                       insight_text: { type: "string", description: "4-5 sentences with specific examples and context. Must end with expert attribution: — [Speaker Name]" },
-                      category: { type: "string", description: "Domain-appropriate category (e.g., Strategy, Communication, Psychology, Performance)" },
+                      category: { 
+                        type: "string", 
+                        enum: ["business", "sports", "health_fitness", "technology", "personal_development", "finance", "entertainment", "education", "general"],
+                        description: "MUST be one of: business, sports, health_fitness, technology, personal_development, finance, entertainment, education, general"
+                      },
                       impact_score: { type: "integer", minimum: 1, maximum: 10 },
                       actionability_score: { type: "integer", minimum: 1, maximum: 10 },
                       expert_attribution: { type: "string", description: "Speaker name only, e.g., 'Jordan Peterson'" }

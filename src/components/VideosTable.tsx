@@ -336,14 +336,20 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
                 <img
                   src={`https://img.youtube.com/vi/${video.video_id}/hqdefault.jpg`}
                   alt={video.title}
-                  className="w-full sm:w-24 md:w-32 h-32 sm:h-16 md:h-20 object-cover rounded"
+                  className="w-full sm:w-24 md:w-32 h-32 sm:h-16 md:h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => onVideoSelect(video.id)}
                 />
 
                 {/* Content */}
                 <div className="flex-1 min-w-0 space-y-2 w-full">
                   {/* Title & Date */}
                   <div>
-                    <h3 className="font-medium text-base line-clamp-1">{video.title}</h3>
+                    <h3 
+                      className="font-medium text-base line-clamp-1 cursor-pointer hover:text-primary transition-colors"
+                      onClick={() => onVideoSelect(video.id)}
+                    >
+                      {video.title}
+                    </h3>
                     <p className="text-sm text-muted-foreground">
                       {formatDistanceToNow(new Date(video.analyzed_at), { addSuffix: true })}
                     </p>
@@ -354,7 +360,12 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
                     {video.content_sources?.source_name && (
                       <div>
                         <span className="text-muted-foreground">Source: </span>
-                        <span>{video.content_sources.source_name}</span>
+                        <span 
+                          className="cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => onVideoSelect(video.id)}
+                        >
+                          {video.content_sources.source_name}
+                        </span>
                       </div>
                     )}
                     <div>
