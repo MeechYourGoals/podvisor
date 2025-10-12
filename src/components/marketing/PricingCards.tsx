@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Check, Crown, Zap, Users, Loader2, ExternalLink } from 'lucide-react';
+import { Check, Crown, Zap, Loader2, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -45,27 +45,28 @@ const plans = [
     ],
     cta: 'Upgrade to Pro',
     variant: 'default' as const,
-    popular: true
+    popular: false
   },
   {
-    tier: 'team',
-    name: 'Team',
-    price: '$29.99',
-    period: '/month',
-    headline: 'For teams and organizations',
-    icon: Users,
+    tier: 'annual',
+    name: 'Annual Pro',
+    price: '$99.99',
+    period: '/year',
+    headline: 'Save 17% with annual billing',
+    icon: Crown,
     features: [
-      'Everything in Pro',
-      'Team collaboration tools',
-      'Shared video libraries',
-      'Admin controls',
-      'PDF export',
-      '24/7 priority support',
-      'Custom integrations (coming soon)'
+      'All Pro features included',
+      'Unlimited video analyses',
+      'Unlimited context profiles',
+      'Advanced bookmarks & folders',
+      'Unlimited history',
+      'Export to JSON, CSV, Markdown',
+      'Save $20 per year vs monthly',
+      'Priority email support'
     ],
-    cta: 'Start Team Trial',
-    variant: 'outline' as const,
-    popular: false
+    cta: 'Get Annual Pro',
+    variant: 'default' as const,
+    popular: true
   }
 ];
 

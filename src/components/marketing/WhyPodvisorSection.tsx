@@ -1,4 +1,4 @@
-import { Brain, RefreshCw, Wrench, Users, Clock, Zap, ChevronRight } from 'lucide-react';
+import { RefreshCw, Users, Clock, Zap, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -249,31 +249,6 @@ export const WhyPodvisorSection = () => {
           </Card>
         </div>
       </div>
-
-      {/* Demo Video Section */}
-      <Card className="border-2 border-primary/50 overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10">
-          <CardTitle className="text-2xl text-center">See It In Action</CardTitle>
-          <CardDescription className="text-center text-base">
-            Watch how switching profiles and refreshing insights takes seconds, not minutes
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="aspect-video bg-muted flex items-center justify-center relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/20 to-primary/20 opacity-50" />
-            <div className="relative z-10 text-center space-y-4 p-8">
-              <Brain className="h-16 w-16 text-primary mx-auto animate-pulse" />
-              <p className="text-lg font-semibold">Demo Video Coming Soon</p>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Watch a 60-second walkthrough showing multi-profile analysis and instant refresh in action
-              </p>
-              <Button variant="outline" className="mt-4">
-                Get Notified When It's Live
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Social Proof Quote */}
       <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">

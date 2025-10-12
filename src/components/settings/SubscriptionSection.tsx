@@ -13,7 +13,7 @@ export const SubscriptionSection = () => {
   const [isManaging, setIsManaging] = useState(false);
   const { toast } = useToast();
 
-  const handleUpgrade = async (tier: 'pro' | 'team') => {
+  const handleUpgrade = async (tier: 'pro' | 'annual') => {
     setIsUpgrading(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {

@@ -1,15 +1,13 @@
 import { Check, X } from 'lucide-react';
 
 const features = [
-  { name: 'Video Analysis', free: '10/month', pro: 'Unlimited', team: 'Unlimited' },
-  { name: 'Context Profiles', free: '3 profiles', pro: 'Unlimited', team: 'Unlimited' },
-  { name: 'Personalized Insights', free: true, pro: true, team: true },
-  { name: 'Bookmarks & Folders', free: 'Basic', pro: 'Unlimited', team: 'Unlimited' },
-  { name: 'Export Options', free: 'JSON only', pro: 'JSON, CSV, Markdown', team: 'JSON, CSV, Markdown, PDF' },
-  { name: 'Video Storage', free: 'Last 30 days', pro: 'Unlimited history', team: 'Unlimited history' },
-  { name: 'Refresh Insights', free: false, pro: true, team: true },
-  { name: 'Team Collaboration', free: false, pro: false, team: true },
-  { name: 'Priority Support', free: false, pro: false, team: true },
+  { name: 'Video Analysis', free: '10/month', pro: 'Unlimited', annual: 'Unlimited' },
+  { name: 'Context Profiles', free: '3 profiles', pro: 'Unlimited', annual: 'Unlimited' },
+  { name: 'Personalized Insights', free: true, pro: true, annual: true },
+  { name: 'Bookmarks & Folders', free: 'Basic', pro: 'Unlimited', annual: 'Unlimited' },
+  { name: 'Export Options', free: 'JSON only', pro: 'JSON, CSV, Markdown', annual: 'JSON, CSV, Markdown' },
+  { name: 'Video Storage', free: 'Last 30 days', pro: 'Unlimited history', annual: 'Unlimited history' },
+  { name: 'Refresh Insights', free: false, pro: true, annual: true },
 ];
 
 const renderCell = (value: string | boolean) => {
@@ -41,13 +39,13 @@ export const PricingSection = () => {
               <tr className="border-b-2 border-border">
                 <th className="text-left py-4 px-6 text-lg font-semibold">Feature</th>
                 <th className="text-center py-4 px-6 text-lg font-semibold">Free</th>
+                <th className="text-center py-4 px-6 text-lg font-semibold">Pro</th>
                 <th className="text-center py-4 px-6 text-lg font-semibold relative">
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full whitespace-nowrap">
-                    Most Popular
+                    Best Value
                   </div>
-                  Pro
+                  Annual Pro
                 </th>
-                <th className="text-center py-4 px-6 text-lg font-semibold">Team</th>
               </tr>
             </thead>
             <tbody>
@@ -60,8 +58,8 @@ export const PricingSection = () => {
                 >
                   <td className="py-4 px-6 text-sm font-medium">{feature.name}</td>
                   <td className="py-4 px-6 text-center">{renderCell(feature.free)}</td>
-                  <td className="py-4 px-6 text-center bg-primary/5">{renderCell(feature.pro)}</td>
-                  <td className="py-4 px-6 text-center">{renderCell(feature.team)}</td>
+                  <td className="py-4 px-6 text-center">{renderCell(feature.pro)}</td>
+                  <td className="py-4 px-6 text-center bg-primary/5">{renderCell(feature.annual)}</td>
                 </tr>
               ))}
             </tbody>
@@ -70,7 +68,7 @@ export const PricingSection = () => {
 
         {/* Mobile Cards */}
         <div className="lg:hidden space-y-6">
-          {['Free', 'Pro', 'Team'].map((tier) => (
+          {['Free', 'Pro', 'Annual'].map((tier) => (
             <div 
               key={tier}
               className={`border-2 rounded-lg p-6 space-y-4 ${
@@ -78,10 +76,10 @@ export const PricingSection = () => {
               }`}
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">{tier}</h3>
-                {tier === 'Pro' && (
+                <h3 className="text-xl font-bold">{tier === 'Annual' ? 'Annual Pro' : tier}</h3>
+                {tier === 'Annual' && (
                   <span className="bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full">
-                    Most Popular
+                    Best Value
                   </span>
                 )}
               </div>
