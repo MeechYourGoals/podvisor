@@ -98,17 +98,17 @@ export const DefaultProfileSection = () => {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="default-description">Who are you?</Label>
+        <Label htmlFor="default-description">Describe yourself and your goals</Label>
         <Textarea
           id="default-description"
-          placeholder="e.g., I'm a middle-aged mom in California with 2 kids who is starting to get back to work after being out of the workforce for 2 years..."
+          placeholder="e.g., I'm a retail investor focused on AI and semiconductors. I want clear takeaways and 3 concrete actions after each video."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={6}
           className="resize-none"
         />
         <p className="text-xs text-muted-foreground">
-          Describe yourself to get more relevant insights from videos
+          Tell us who you are and what you want to achieve from these analyses
         </p>
       </div>
 

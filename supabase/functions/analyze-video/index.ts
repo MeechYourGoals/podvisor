@@ -8,6 +8,39 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Fallback transcript fetcher using YouTube's timedtext API
+async function fetchTimedTextTranscript(videoId: string): Promise<string> {
+  const langs = ['en-US', 'en', 'en-GB'];
+  
+  for (const lang of langs) {
+    try {
+      const url = `https://video.google.com/timedtext?lang=${lang}&v=${videoId}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const xml = await response.text();
+        // Parse XML <text> nodes
+        const textMatches = xml.matchAll(/<text[^>]*>([^<]+)<\/text>/g);
+        const lines = Array.from(textMatches).map(match => {
+          // Decode HTML entities
+          return match[1]
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'");
+        });
+        if (lines.length > 0) {
+          console.log(`[analyze-video] Fetched transcript via timedtext (${lang})`);
+          return lines.join(' ');
+        }
+      }
+    } catch (e) {
+      console.log(`[analyze-video] timedtext fetch failed for ${lang}:`, e);
+    }
+  }
+  throw new Error('No transcript available from timedtext API');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -52,19 +85,28 @@ serve(async (req) => {
 
     console.log('[analyze-video] Video metadata:', { videoTitle, channelName });
 
-    // Fetch video transcript
+    // Fetch video transcript with fallback
     console.log('[analyze-video] Fetching transcript');
     let transcript = '';
-    let transcriptError = null;
+    let transcriptSource = 'none';
+    
     try {
       const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
       transcript = transcriptData.map((item: any) => item.text).join(' ');
-      console.log('[analyze-video] Transcript fetched, length:', transcript.length);
-    } catch (error: any) {
-      transcriptError = error.message;
-      console.warn('[analyze-video] Failed to fetch transcript:', error.message);
-      // Continue without transcript - will use title/description only
+      transcriptSource = 'youtube-transcript';
+      console.log('[analyze-video] Transcript fetched via youtube-transcript, length:', transcript.length);
+    } catch (transcriptError) {
+      console.log('[analyze-video] youtube-transcript failed, trying timedtext fallback');
+      try {
+        transcript = await fetchTimedTextTranscript(videoId);
+        transcriptSource = 'timedtext';
+      } catch (timedtextError) {
+        console.log('[analyze-video] All transcript methods failed');
+        transcriptSource = 'unavailable';
+      }
     }
+    
+    console.log(`[analyze-video] Transcript source: ${transcriptSource}, length: ${transcript.length}`);
 
     // Get user profile if provided, otherwise get default profile
     console.log('[analyze-video] Resolving user profile');
@@ -143,7 +185,7 @@ ${transcript ? '- Base insights on the ACTUAL TRANSCRIPT provided, not assumptio
     const userPrompt = `${transcript ? `FULL TRANSCRIPT:\n${transcript.slice(0, 50000)}\n\n` : ''}VIDEO METADATA:
 Title: ${videoTitle}
 Source: ${channelName}
-URL: ${videoUrl}${transcriptError ? `\n\nNote: Transcript unavailable (${transcriptError}). Analyze based on title and available metadata.` : ''}
+URL: ${videoUrl}${transcriptSource === 'unavailable' ? `\n\nNote: Transcript unavailable. Analyze based on title and available metadata.` : ''}
 
 ${userProfile ? `USER PROFILE (analyze through this lens):
 - Name: ${userProfile.profile_name}
@@ -164,6 +206,11 @@ CRITICAL FORMATTING:
 
     // Call Lovable AI with tool calling
     console.log('[analyze-video] Calling Lovable AI API');
+    
+    // Adaptive model selection based on transcript length
+    const model = transcript.length > 12000 ? 'google/gemini-2.5-pro' : 'google/gemini-2.5-flash';
+    console.log(`[analyze-video] Using model: ${model}`);
+    
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -171,7 +218,7 @@ CRITICAL FORMATTING:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -269,40 +316,136 @@ CRITICAL FORMATTING:
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('AI API error:', aiResponse.status, errorText);
+      console.error('[analyze-video] AI gateway error:', aiResponse.status, errorText);
+      
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Rate limits exceeded, please try again later.',
+            error_code: 'RATE_LIMIT'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
+        );
+      }
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Payment required, please add funds to your Lovable AI workspace.',
+            error_code: 'PAYMENT_REQUIRED'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 402 }
+        );
+      }
+      
       return new Response(
-        JSON.stringify({ error: 'Failed to analyze video with AI' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: 'AI gateway error',
+          error_code: 'AI_GATEWAY_ERROR',
+          details: errorText
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
     const aiData = await aiResponse.json();
     console.log('[analyze-video] AI response received');
-
-    const toolCall = aiData.choices[0].message.tool_calls?.[0];
-    if (!toolCall) {
-      console.error('[analyze-video] No tool call in AI response');
+    
+    // Check for AI error in response
+    if (aiData.error) {
+      console.error('[analyze-video] AI returned error:', aiData.error);
       return new Response(
-        JSON.stringify({ error: 'AI did not provide structured data' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: aiData.error.message || 'AI processing error',
+          error_code: 'AI_GATEWAY_ERROR'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
-    let extractedData;
-    try {
-      extractedData = JSON.parse(toolCall.function.arguments);
-      console.log('[analyze-video] Extracted data:', { 
-        insightsCount: extractedData.insights?.length,
-        speakersCount: extractedData.speakers?.length,
-        tagsCount: extractedData.tags?.length 
-      });
-    } catch (parseError) {
-      console.error('[analyze-video] Failed to parse tool arguments:', parseError);
+    // Defensive parsing of AI response
+    const choice0 = aiData.choices?.[0];
+    if (!choice0) {
+      console.error('[analyze-video] No choices in AI response');
       return new Response(
-        JSON.stringify({ error: 'Failed to parse AI response data' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: 'AI returned no choices',
+          error_code: 'AI_NO_CHOICES'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
+
+    const msg = choice0.message || {};
+    const toolCalls = msg.tool_calls || (msg.function_call ? [{ type: 'function', function: msg.function_call }] : []);
+    
+    let extractedData: any;
+    
+    if (toolCalls.length > 0) {
+      const toolCall = toolCalls[0];
+      try {
+        extractedData = typeof toolCall.function?.arguments === 'string' 
+          ? JSON.parse(toolCall.function.arguments)
+          : toolCall.function?.arguments || toolCall.arguments;
+      } catch (e) {
+        console.error('[analyze-video] Failed to parse tool call arguments:', e);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to parse AI response data',
+            error_code: 'AI_INVALID_STRUCTURE'
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      // Attempt to extract JSON from content
+      console.log('[analyze-video] No tool call, attempting to parse content');
+      const content = msg.content || '';
+      
+      // Try to find JSON in fenced code block
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        try {
+          extractedData = JSON.parse(jsonMatch[1]);
+        } catch (e) {
+          console.error('[analyze-video] Failed to parse JSON from code block');
+        }
+      }
+      
+      // Fallback: try parsing entire content
+      if (!extractedData) {
+        try {
+          extractedData = JSON.parse(content);
+        } catch (e) {
+          console.error('[analyze-video] Failed to parse content as JSON');
+          return new Response(
+            JSON.stringify({ 
+              error: 'AI returned unstructured data',
+              error_code: 'AI_NO_TOOL_CALL'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          );
+        }
+      }
+    }
+
+    // Validate minimum structure
+    if (!extractedData.insights || !Array.isArray(extractedData.insights) || extractedData.insights.length === 0) {
+      console.error('[analyze-video] Invalid insights structure');
+      return new Response(
+        JSON.stringify({ 
+          error: 'AI returned invalid insights structure',
+          error_code: 'AI_INVALID_STRUCTURE'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
+    console.log('[analyze-video] Extracted data:', { 
+      insightsCount: extractedData.insights?.length,
+      personalizedCount: extractedData.personalized_insights?.length,
+      speakersCount: extractedData.speakers?.length,
+      tagsCount: extractedData.tags?.length 
+    });
 
     // Store in database
     // 1. Create or find content source

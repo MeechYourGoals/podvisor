@@ -56,10 +56,35 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
         throw error;
       }
 
+      // Handle error codes from edge function
+      if (result?.error_code) {
+        const errorMessages: Record<string, string> = {
+          'AI_NO_CHOICES': "The AI didn't return structured insights. Please try again or another video.",
+          'AI_NO_TOOL_CALL': "The AI didn't return structured insights. Please try again or another video.",
+          'AI_INVALID_STRUCTURE': "The AI returned incomplete data. Please try again.",
+          'TRANSCRIPT_UNAVAILABLE': "No transcript found; using limited metadata. Results may be lighter.",
+          'AI_GATEWAY_ERROR': result.error || 'AI processing error occurred.',
+          'RATE_LIMIT': 'Rate limit exceeded. Please try again later.',
+          'PAYMENT_REQUIRED': 'Payment required. Please upgrade your plan.',
+        };
+        
+        const message = errorMessages[result.error_code] || result.error || 'An error occurred during analysis.';
+        throw new Error(message);
+      }
+
+      // Success with possible warning
       toast({
         title: "Success!",
         description: `Video analyzed! ${result.insightCount || 0} insights extracted.`,
       });
+      
+      if (result?.warning) {
+        toast({
+          title: "Note",
+          description: result.warning,
+          variant: "default",
+        });
+      }
 
       onAnalysisComplete();
       reset();
