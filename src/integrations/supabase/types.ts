@@ -22,6 +22,7 @@ export type Database = {
           folder_name: string
           icon: string | null
           id: string
+          profile_id: string | null
           sort_order: number | null
           updated_at: string | null
           user_id: string | null
@@ -33,6 +34,7 @@ export type Database = {
           folder_name: string
           icon?: string | null
           id?: string
+          profile_id?: string | null
           sort_order?: number | null
           updated_at?: string | null
           user_id?: string | null
@@ -44,11 +46,20 @@ export type Database = {
           folder_name?: string
           icon?: string | null
           id?: string
+          profile_id?: string | null
           sort_order?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bookmark_folders_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_context_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bookmarked_insights: {
         Row: {

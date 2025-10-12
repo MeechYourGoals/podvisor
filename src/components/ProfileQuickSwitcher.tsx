@@ -1,42 +1,29 @@
-import { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Globe } from 'lucide-react';
+import { useProfileContext } from '@/contexts/ProfileContext';
 
 interface ProfileQuickSwitcherProps {
-  selectedProfileId: string | null;
-  onProfileSelect: (profileId: string | null) => void;
+  selectedProfileId?: string | null;
+  onProfileSelect?: (profileId: string | null) => void;
+  showGlobalOption?: boolean;
+  compact?: boolean;
+  showLabel?: boolean;
 }
 
-export const ProfileQuickSwitcher = ({ selectedProfileId, onProfileSelect }: ProfileQuickSwitcherProps) => {
-  const [profiles, setProfiles] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export const ProfileQuickSwitcher = ({ 
+  selectedProfileId: externalSelectedId, 
+  onProfileSelect: externalOnSelect,
+  showGlobalOption = false,
+  compact = false,
+  showLabel = true
+}: ProfileQuickSwitcherProps) => {
+  const { profiles, isLoading, activeProfileId, setActiveProfileId } = useProfileContext();
 
-  useEffect(() => {
-    loadProfiles();
-  }, []);
-
-  const loadProfiles = async () => {
-    setIsLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('user_context_profiles')
-        .select('id, profile_name, category')
-        .eq('user_id', user.id)
-        .order('profile_name');
-
-      if (error) throw error;
-      setProfiles(data || []);
-    } catch (error) {
-      console.error('Error loading profiles:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Use context values if no external props provided
+  const selectedProfileId = externalSelectedId !== undefined ? externalSelectedId : activeProfileId;
+  const onProfileSelect = externalOnSelect || setActiveProfileId;
 
   if (isLoading) {
     return (
@@ -46,28 +33,55 @@ export const ProfileQuickSwitcher = ({ selectedProfileId, onProfileSelect }: Pro
     );
   }
 
+  const currentProfile = profiles.find(p => p.id === selectedProfileId);
+
   return (
-    <div className="space-y-2">
-      <Label>Analyze with:</Label>
+    <div className={compact ? "" : "space-y-2"}>
+      {!compact && showLabel && <Label>Analyze with:</Label>}
       <Select
         value={selectedProfileId || 'default'}
         onValueChange={(value) => onProfileSelect(value === 'default' ? null : value)}
       >
-        <SelectTrigger>
-          <SelectValue placeholder="Select a profile" />
+        <SelectTrigger className={compact ? "w-auto" : "w-full"}>
+          <SelectValue>
+            {compact ? (
+              currentProfile?.profile_name || "Default"
+            ) : (
+              <div className="flex items-center gap-2">
+                <span>{currentProfile?.profile_name || "Default Profile"}</span>
+                {currentProfile && (
+                  <Badge variant="secondary" className="text-xs">
+                    {currentProfile.category}
+                  </Badge>
+                )}
+              </div>
+            )}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="default">Default Profile</SelectItem>
+          <SelectItem value="default">
+            <div className="flex items-center gap-2">
+              {showGlobalOption && <Globe className="h-3 w-3" />}
+              <span>{showGlobalOption ? "Global View (All Profiles)" : "Default Profile"}</span>
+            </div>
+          </SelectItem>
           {profiles.map((profile) => (
             <SelectItem key={profile.id} value={profile.id}>
-              {profile.profile_name} ({profile.category})
+              <div className="flex items-center gap-2">
+                <span>{profile.profile_name}</span>
+                <Badge variant="outline" className="text-xs">
+                  {profile.category}
+                </Badge>
+              </div>
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-      <p className="text-xs text-muted-foreground">
-        Choose a profile to get insights tailored to your specific context
-      </p>
+      {!compact && (
+        <p className="text-xs text-muted-foreground">
+          Choose a profile to get insights tailored to your specific context
+        </p>
+      )}
     </div>
   );
 };

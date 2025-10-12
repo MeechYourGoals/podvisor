@@ -8,12 +8,68 @@ import { ProfileFormDialog } from '../ProfileFormDialog';
 
 export const SavedProfilesSection = () => {
   const [profiles, setProfiles] = useState<any[]>([]);
+  const [subscription, setSubscription] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    loadProfiles();
+    loadSubscription();
+  }, []);
+
+  const loadSubscription = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      setSubscription(data);
+    } catch (error: any) {
+      console.error('Error loading subscription:', error);
+    }
+  };
+
   const handleNewProfile = () => {
+    if (!subscription) return;
+
+    const profileLimit = subscription.profile_limit || 3;
+    
+    // Check if at or over limit
+    if (profiles.length >= profileLimit) {
+      if (subscription.tier === 'free') {
+        toast({
+          title: "Profile limit reached",
+          description: `Free plan: ${profiles.length}/${profileLimit} profiles. Upgrade to Pro for up to 10 profiles!`,
+          variant: "destructive",
+        });
+      } else {
+        // Pro/Annual users at 10/10
+        toast({
+          title: "Profile limit reached",
+          description: `You've reached the maximum of ${profileLimit} profiles. Delete an existing profile to create a new one.`,
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    // Warning at 8/10 for paid users
+    if (subscription.tier !== 'free' && profiles.length === 8) {
+      toast({
+        title: "Approaching limit",
+        description: `You're at ${profiles.length}/${profileLimit} profiles. Consider removing unused profiles.`,
+      });
+    }
+
     setSelectedProfile(null);
     setDialogOpen(true);
   };
@@ -89,8 +145,15 @@ export const SavedProfilesSection = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold">Saved Profiles</h3>
-        <Button size="sm" variant="outline" onClick={handleNewProfile}>
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-semibold">Saved Profiles</h3>
+          {subscription && (
+            <Badge variant="outline" className="text-xs">
+              {profiles.length}/{subscription.profile_limit || 3}
+            </Badge>
+          )}
+        </div>
+        <Button size="sm" variant="outline" onClick={handleNewProfile} disabled={!subscription}>
           <Plus className="h-4 w-4 mr-1" />
           New
         </Button>

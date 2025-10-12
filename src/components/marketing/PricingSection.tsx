@@ -2,7 +2,7 @@ import { Check, X } from 'lucide-react';
 
 const features = [
   { name: 'Video Analysis', free: '10/month', pro: 'Unlimited', annual: 'Unlimited' },
-  { name: 'Context Profiles', free: '3 profiles', pro: 'Unlimited', annual: 'Unlimited' },
+  { name: 'Context Profiles', free: '3 profiles', pro: '10 profiles', annual: '10 profiles' },
   { name: 'Personalized Insights', free: true, pro: true, annual: true },
   { name: 'Bookmarks & Folders', free: 'Basic', pro: 'Unlimited', annual: 'Unlimited' },
   { name: 'Export Options', free: 'JSON only', pro: 'JSON, CSV, Markdown', annual: 'JSON, CSV, Markdown' },

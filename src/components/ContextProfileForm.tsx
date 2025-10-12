@@ -98,7 +98,7 @@ const ContextProfileForm = ({ onProfileSelect, onAnalyze, onSkip, isAnalyzing }:
         const tierName = subscription?.tier === 'pro' || subscription?.tier === 'annual' ? 'Pro' : 'Free';
         toast({
           title: "Profile limit reached",
-          description: `${tierName} plan: ${savedProfiles.length}/${profileLimit} profiles saved. ${subscription?.tier === 'free' ? 'Upgrade to Pro for unlimited profiles!' : 'Delete one to save a new profile.'}`,
+          description: `${tierName} plan: ${savedProfiles.length}/${profileLimit} profiles saved. ${subscription?.tier === 'free' ? 'Upgrade to Pro for up to 10 profiles!' : 'Delete a profile in Settings to create a new one.'}`,
           variant: "destructive",
         });
         return;
@@ -297,7 +297,7 @@ const ContextProfileForm = ({ onProfileSelect, onAnalyze, onSkip, isAnalyzing }:
               <Label htmlFor="save-profile">
                 Save this profile for future use ({savedProfiles.length}/{subscription?.profile_limit || 3})
                 {subscription?.tier === 'free' && savedProfiles.length >= 2 && (
-                  <span className="text-primary ml-1">• Upgrade for 15 profiles</span>
+                  <span className="text-primary ml-1">• Upgrade for 10 profiles</span>
                 )}
               </Label>
             </div>

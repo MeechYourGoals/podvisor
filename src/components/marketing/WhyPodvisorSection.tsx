@@ -95,7 +95,7 @@ export const WhyPodvisorSection = () => {
               </div>
             </div>
             <p className="text-xs text-muted-foreground pt-2">
-              Free users: 3 profiles | Pro users: Unlimited profiles
+              Free users: 3 profiles | Pro users: 10 profiles
             </p>
           </CardContent>
         </Card>

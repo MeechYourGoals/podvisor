@@ -4,9 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Plus, Loader2, Folder } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Loader2, Folder, Globe } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useProfileContext } from '@/contexts/ProfileContext';
 
 interface BookmarkDialogProps {
   open: boolean;
@@ -21,6 +25,11 @@ interface Folder {
   folder_name: string;
   color: string;
   icon: string | null;
+  profile_id: string | null;
+  user_context_profiles?: {
+    profile_name: string;
+    category: string;
+  } | null;
 }
 
 export const BookmarkDialog = ({ open, onOpenChange, videoId, insightId, type }: BookmarkDialogProps) => {
@@ -29,8 +38,11 @@ export const BookmarkDialog = ({ open, onOpenChange, videoId, insightId, type }:
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderColor, setNewFolderColor] = useState('#6366f1');
+  const [newFolderProfileTarget, setNewFolderProfileTarget] = useState<'current' | 'global' | 'other'>('current');
+  const [newFolderOtherProfileId, setNewFolderOtherProfileId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { activeProfileId, profiles } = useProfileContext();
 
   useEffect(() => {
     if (open) {
@@ -44,11 +56,17 @@ export const BookmarkDialog = ({ open, onOpenChange, videoId, insightId, type }:
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('bookmark_folders')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .select('*, user_context_profiles(profile_name, category)')
+        .eq('user_id', user.id);
+
+      // Filter by active profile
+      if (activeProfileId) {
+        query = query.or(`profile_id.is.null,profile_id.eq.${activeProfileId}`);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       setFolders(data || []);
@@ -105,24 +123,41 @@ export const BookmarkDialog = ({ open, onOpenChange, videoId, insightId, type }:
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      let targetProfileId: string | null = null;
+      
+      if (newFolderProfileTarget === 'current') {
+        targetProfileId = activeProfileId;
+      } else if (newFolderProfileTarget === 'other') {
+        targetProfileId = newFolderOtherProfileId;
+      }
+      // 'global' keeps it null
+
       const { data, error } = await supabase
         .from('bookmark_folders')
         .insert({
           user_id: user.id,
           folder_name: newFolderName,
           color: newFolderColor,
+          profile_id: targetProfileId,
         })
-        .select()
+        .select('*, user_context_profiles(profile_name, category)')
         .single();
 
       if (error) throw error;
 
       setFolders(prev => [data, ...prev]);
       setNewFolderName('');
+      setNewFolderProfileTarget('current');
+      setNewFolderOtherProfileId('');
       setIsCreatingFolder(false);
+      
+      const profileName = targetProfileId 
+        ? profiles.find(p => p.id === targetProfileId)?.profile_name 
+        : 'Global';
+      
       toast({
         title: "Folder created",
-        description: "New bookmark folder created successfully",
+        description: `Folder created in ${profileName} view`,
       });
     } catch (error: any) {
       toast({
@@ -270,6 +305,53 @@ export const BookmarkDialog = ({ open, onOpenChange, videoId, insightId, type }:
                   className="w-20 h-8"
                 />
               </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm">Save to:</Label>
+                <RadioGroup value={newFolderProfileTarget} onValueChange={(v) => setNewFolderProfileTarget(v as any)}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="current" id="current" />
+                    <Label htmlFor="current" className="flex items-center gap-2 cursor-pointer">
+                      {activeProfileId ? (
+                        <Badge variant="secondary">
+                          {profiles.find(p => p.id === activeProfileId)?.profile_name || 'Current Profile'}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">Default Profile</Badge>
+                      )}
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="global" id="global" />
+                    <Label htmlFor="global" className="flex items-center gap-2 cursor-pointer">
+                      <Globe className="h-3 w-3" />
+                      <Badge variant="outline">Global (All Profiles)</Badge>
+                    </Label>
+                  </div>
+                  {profiles.length > 1 && (
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="other" id="other" />
+                      <Label htmlFor="other" className="cursor-pointer">Another profile</Label>
+                    </div>
+                  )}
+                </RadioGroup>
+                
+                {newFolderProfileTarget === 'other' && (
+                  <Select value={newFolderOtherProfileId} onValueChange={setNewFolderOtherProfileId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select profile" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles.filter(p => p.id !== activeProfileId).map((profile) => (
+                        <SelectItem key={profile.id} value={profile.id}>
+                          {profile.profile_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleCreateFolder}>
                   Create
@@ -298,7 +380,19 @@ export const BookmarkDialog = ({ open, onOpenChange, videoId, insightId, type }:
                     onCheckedChange={() => handleToggleFolder(folder.id)}
                   />
                   <Folder className="h-4 w-4" style={{ color: folder.color }} />
-                  <Label className="flex-1 cursor-pointer">{folder.folder_name}</Label>
+                  <div className="flex-1 flex items-center gap-2">
+                    <Label className="cursor-pointer">{folder.folder_name}</Label>
+                    {folder.profile_id ? (
+                      <Badge variant="secondary" className="text-xs">
+                        {folder.user_context_profiles?.profile_name || 'Profile'}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        <Globe className="h-2 w-2 mr-1" />
+                        Global
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               ))
             )}

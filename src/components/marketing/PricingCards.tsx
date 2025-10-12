@@ -35,7 +35,7 @@ const plans = [
     icon: Crown,
     features: [
       'Unlimited video analyses',
-      'Unlimited context profiles',
+      'Up to 10 context profiles',
       'Advanced bookmarks & folders',
       'Unlimited history',
       'Refresh insights anytime',
@@ -57,7 +57,7 @@ const plans = [
     features: [
       'All Pro features included',
       'Unlimited video analyses',
-      'Unlimited context profiles',
+      'Up to 10 context profiles',
       'Advanced bookmarks & folders',
       'Unlimited history',
       'Export to JSON, CSV, Markdown',

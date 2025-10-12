@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfileContext } from '@/contexts/ProfileContext';
+import { ProfileQuickSwitcher } from './ProfileQuickSwitcher';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -10,7 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Folder, Plus, Trash2, Youtube, FileText, Edit, Download } from 'lucide-react';
+import { Folder, Plus, Trash2, Youtube, FileText, Edit, Download, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -27,6 +29,11 @@ interface BookmarkFolder {
   color: string;
   icon: string | null;
   sort_order: number;
+  profile_id: string | null;
+  user_context_profiles?: {
+    profile_name: string;
+    category: string;
+  } | null;
 }
 
 interface BookmarkedVideo {
@@ -66,20 +73,33 @@ const BookmarksPanel = ({ open, onOpenChange, onVideoSelect }: BookmarksPanelPro
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderDesc, setNewFolderDesc] = useState('');
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [selectedProfileFilter, setSelectedProfileFilter] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { activeProfileId, profiles } = useProfileContext();
 
   useEffect(() => {
     if (user && open) {
       loadData();
     }
-  }, [user, open]);
+  }, [user, open, selectedProfileFilter, activeProfileId]);
 
   const loadData = async () => {
     setLoading(true);
     try {
+      let foldersQuery = supabase
+        .from('bookmark_folders')
+        .select('*, user_context_profiles(profile_name, category)')
+        .eq('user_id', user?.id);
+
+      // Filter by selected profile
+      const filterProfileId = selectedProfileFilter !== undefined ? selectedProfileFilter : activeProfileId;
+      if (filterProfileId) {
+        foldersQuery = foldersQuery.or(`profile_id.is.null,profile_id.eq.${filterProfileId}`);
+      }
+
       const [foldersRes, videosRes, insightsRes] = await Promise.all([
-        (supabase as any).from('bookmark_folders').select('*').eq('user_id', user?.id).order('sort_order'),
+        foldersQuery.order('sort_order'),
         (supabase as any).from('bookmarked_videos').select(`
           id,
           video_id,
@@ -131,13 +151,18 @@ const BookmarksPanel = ({ open, onOpenChange, onVideoSelect }: BookmarksPanelPro
           description: newFolderDesc || null,
           color: '#6366f1',
           sort_order: folders.length,
+          profile_id: activeProfileId, // Associate with active profile
         });
 
       if (error) throw error;
 
+      const profileName = activeProfileId
+        ? profiles.find(p => p.id === activeProfileId)?.profile_name
+        : 'Global';
+
       toast({
         title: "Folder created!",
-        description: `"${newFolderName}" has been added`,
+        description: `"${newFolderName}" created in ${profileName} view`,
       });
 
       setNewFolderName('');
@@ -270,7 +295,17 @@ ${i.notes ? `\n**Notes**: ${i.notes}` : ''}
           <SheetTitle>Bookmarks</SheetTitle>
         </SheetHeader>
 
-        <Tabs defaultValue="folders" className="mt-6">
+        <div className="mt-4 mb-4">
+          <Label className="text-sm mb-2 block">Filter by Profile:</Label>
+          <ProfileQuickSwitcher
+            selectedProfileId={selectedProfileFilter}
+            onProfileSelect={setSelectedProfileFilter}
+            showGlobalOption={true}
+            showLabel={false}
+          />
+        </div>
+
+        <Tabs defaultValue="folders" className="mt-2">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="folders">
               <Folder className="h-4 w-4 mr-1" />
@@ -343,6 +378,16 @@ ${i.notes ? `\n**Notes**: ${i.notes}` : ''}
                             style={{ backgroundColor: folder.color }}
                           />
                           {folder.folder_name}
+                          {folder.profile_id ? (
+                            <Badge variant="secondary" className="text-xs">
+                              {folder.user_context_profiles?.profile_name || 'Profile'}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs flex items-center gap-1">
+                              <Globe className="h-2 w-2" />
+                              Global
+                            </Badge>
+                          )}
                         </h4>
                         {folder.description && (
                           <p className="text-sm text-muted-foreground mt-1">
