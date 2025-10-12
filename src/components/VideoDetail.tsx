@@ -5,12 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Youtube, Download, Bookmark, RefreshCw } from 'lucide-react';
+import { Youtube, Download, Bookmark, RefreshCw, ChevronDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import InsightCard from './InsightCard';
 import { useToast } from '@/hooks/use-toast';
 import { BookmarkDialog } from './BookmarkDialog';
 import { ProfileQuickSwitcher } from './ProfileQuickSwitcher';
+import { useProfileContext } from '@/contexts/ProfileContext';
 
 interface VideoDetailProps {
   videoId: string | null;
@@ -63,6 +65,7 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
   const [showProfileSelector, setShowProfileSelector] = useState(false);
   const [selectedRefreshProfile, setSelectedRefreshProfile] = useState<string | null>(null);
   const { toast } = useToast();
+  const { activeProfileId, profiles } = useProfileContext();
 
   useEffect(() => {
     if (videoId && open) {
@@ -148,17 +151,27 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
     setBookmarkDialogOpen(true);
   };
 
-  const handleRefreshAnalysis = async () => {
+  const handleRefreshAnalysis = async (profileIdOverride?: string | null) => {
     if (!video) return;
+    
+    const profileToUse = profileIdOverride !== undefined ? profileIdOverride : selectedRefreshProfile;
+    const profileName = profileToUse 
+      ? profiles.find(p => p.id === profileToUse)?.profile_name || 'Selected Profile'
+      : 'Default';
     
     setIsRefreshing(true);
     setShowProfileSelector(false);
+    
+    toast({
+      title: "Refreshing insights...",
+      description: `Analyzing with ${profileName} profile`,
+    });
     
     try {
       const { data: result, error } = await supabase.functions.invoke('analyze-video', {
         body: {
           videoUrl: video.youtube_url,
-          profileId: selectedRefreshProfile,
+          profileId: profileToUse,
           isRefresh: true,
           existingVideoId: video.id,
         },
@@ -188,18 +201,32 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
         throw new Error(errorMessages[result.error_code] || result.error);
       }
 
-      let successMessage = `Insights refreshed! ${result.insightCount || 0} new insights extracted.`;
-      
-      if (result.transcriptSource === 'perplexity') {
-        successMessage += ' (AI analysis method)';
-      } else if (result.transcriptSource === 'metadata-only') {
-        successMessage += ' (Limited - metadata only)';
+      const insightCount = result.insightCount || 0;
+      const personalizedCount = result.personalizedCount || 0;
+
+      if (insightCount === 0 && personalizedCount === 0) {
+        toast({
+          title: "Limited Results",
+          description: `No insights extracted. ${result.transcriptSource === 'metadata-only' ? 'Try a video with captions available.' : 'Please try again later.'}`,
+          variant: "destructive",
+        });
+      } else {
+        let successMessage = `${insightCount} insights`;
+        if (personalizedCount > 0) {
+          successMessage += ` + ${personalizedCount} personalized`;
+        }
+        
+        if (result.transcriptSource === 'perplexity') {
+          successMessage += ' (AI analysis)';
+        } else if (result.transcriptSource === 'metadata-only') {
+          successMessage += ' (metadata only)';
+        }
+        
+        toast({
+          title: "Insights Refreshed!",
+          description: successMessage,
+        });
       }
-      
-      toast({
-        title: "Success!",
-        description: successMessage,
-      });
 
       if (result?.warnings && Array.isArray(result.warnings)) {
         result.warnings.forEach((warning: string) => {
@@ -279,6 +306,7 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
         <SheetHeader>
           {loading || !video ? (
             <>
+              <SheetTitle className="sr-only">Loading video details</SheetTitle>
               <Skeleton className="h-8 w-3/4" />
               <Skeleton className="h-4 w-1/2" />
             </>
@@ -326,23 +354,55 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                   )}
 
                   {/* Source */}
-                  <SheetDescription className="text-left">
-                    {video.content_sources && (
-                      <p className="text-sm">
-                        Source: {video.content_sources.source_name}
-                      </p>
-                    )}
-                  </SheetDescription>
+                  {video.content_sources && (
+                    <SheetDescription className="text-left text-sm">
+                      Source: {video.content_sources.source_name}
+                    </SheetDescription>
+                  )}
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={() => setShowProfileSelector(!showProfileSelector)}
-                    disabled={isRefreshing}
-                  >
-                    <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-                  </Button>
+                  <div className="flex">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => handleRefreshAnalysis(activeProfileId)}
+                      disabled={isRefreshing}
+                      className="rounded-r-none"
+                    >
+                      <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="default"
+                          disabled={isRefreshing}
+                          className="rounded-l-none border-l px-2"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-64">
+                        <div className="p-2">
+                          <p className="text-sm font-medium mb-2">Refresh with profile:</p>
+                          <ProfileQuickSwitcher
+                            compact
+                            showGlobalOption
+                            selectedProfileId={selectedRefreshProfile}
+                            onProfileSelect={setSelectedRefreshProfile}
+                          />
+                          <Button 
+                            size="sm" 
+                            className="w-full mt-3"
+                            onClick={() => handleRefreshAnalysis()}
+                            disabled={isRefreshing}
+                          >
+                            {isRefreshing ? 'Analyzing...' : 'Refresh Now'}
+                          </Button>
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                   <Button
                     size="sm"
                     variant="outline"
@@ -359,25 +419,6 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                   </Button>
                 </div>
               </div>
-              
-              {/* Profile Selector for Refresh */}
-              {showProfileSelector && (
-                <div className="mt-4 p-4 border rounded-lg bg-muted/50">
-                  <p className="text-sm font-medium mb-3">Select a profile to refresh insights:</p>
-                  <ProfileQuickSwitcher
-                    selectedProfileId={selectedRefreshProfile}
-                    onProfileSelect={setSelectedRefreshProfile}
-                  />
-                  <div className="mt-4 flex gap-2">
-                    <Button onClick={handleRefreshAnalysis} disabled={isRefreshing}>
-                      {isRefreshing ? 'Analyzing...' : 'Refresh Now'}
-                    </Button>
-                    <Button variant="outline" onClick={() => setShowProfileSelector(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
             </>
           )}
         </SheetHeader>
@@ -418,13 +459,15 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
               </TabsContent>
               <TabsContent value="personal" className="space-y-4 mt-4">
                 {personalizedInsights.length === 0 ? (
-                  <div className="text-center py-8 space-y-2">
+                  <div className="text-center py-8 space-y-3">
                     <p className="text-muted-foreground">
                       No personalized insights for this video.
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      Analyze videos with a profile to unlock personalized insights!
-                    </p>
+                    {!activeProfileId && (
+                      <p className="text-sm text-muted-foreground">
+                        Tip: Create and select a profile to unlock personalized insights tailored to your needs!
+                      </p>
+                    )}
                   </div>
                 ) : (
                   personalizedInsights.map((insight, index) => (

@@ -766,6 +766,14 @@ CRITICAL FORMATTING:
       warnings.push('Limited analysis - metadata only (no transcript available)');
     }
     
+    console.log('[analyze-video] Final results:', {
+      videoId: video.id,
+      insightCount: finalInsightCount,
+      personalizedCount: personalizedCount,
+      transcriptSource: transcriptSource,
+      warningCount: warnings.length
+    });
+    
     return new Response(
       JSON.stringify({
         success: true,
