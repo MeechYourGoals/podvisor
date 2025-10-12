@@ -7,6 +7,12 @@ import AnalysisForm from '@/components/AnalysisForm';
 import VideosTable from '@/components/VideosTable';
 import VideoDetail from '@/components/VideoDetail';
 import { WelcomeDialog } from '@/components/WelcomeDialog';
+import { UseCasesSection } from '@/components/marketing/UseCasesSection';
+import { HowItWorksSection } from '@/components/marketing/HowItWorksSection';
+import { PricingSection } from '@/components/marketing/PricingSection';
+import { PricingCards } from '@/components/marketing/PricingCards';
+import { TestimonialsSection } from '@/components/marketing/TestimonialsSection';
+import { FinalCTASection } from '@/components/marketing/FinalCTASection';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -17,7 +23,30 @@ const Index = () => {
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [videoDetailOpen, setVideoDetailOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [subscription, setSubscription] = useState<any>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (user) {
+      loadSubscription();
+    }
+  }, [user]);
+
+  const loadSubscription = async () => {
+    if (!user) return;
+    
+    try {
+      const { data } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      setSubscription(data);
+    } catch (error) {
+      console.error('Error loading subscription:', error);
+    }
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -95,6 +124,16 @@ const Index = () => {
           open={videoDetailOpen}
           onOpenChange={setVideoDetailOpen}
         />
+
+        {/* Marketing Sections - Show for all users */}
+        <div data-pricing-section>
+          <UseCasesSection />
+          <HowItWorksSection />
+          <PricingSection />
+          <PricingCards />
+          <TestimonialsSection />
+          <FinalCTASection />
+        </div>
       </div>
     </div>
   );

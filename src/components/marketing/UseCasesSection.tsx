@@ -1,0 +1,86 @@
+import { Target, TrendingUp, Users, Lightbulb } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+
+const useCases = [
+  {
+    icon: Target,
+    title: "Startup Founders",
+    description: "Extract tactical lessons from Y Combinator interviews and founder podcasts",
+    examples: "Paul Graham essays, startup podcasts, investor advice",
+    insight: "10 tactical insights extracted in 2 minutes"
+  },
+  {
+    icon: TrendingUp,
+    title: "Athletes & Coaches",
+    description: "Analyze training methodologies from Olympic coaches and pro athletes",
+    examples: "Training videos, sports psychology, performance optimization",
+    insight: "Personalized training insights from world-class experts"
+  },
+  {
+    icon: Users,
+    title: "Business Professionals",
+    description: "Learn negotiation tactics, sales strategies, and leadership principles",
+    examples: "Leadership talks, sales training, management seminars",
+    insight: "Action items tailored to your role and goals"
+  },
+  {
+    icon: Lightbulb,
+    title: "Personal Development",
+    description: "Get personalized advice from productivity experts, psychologists, and life coaches",
+    examples: "Self-improvement videos, mental health talks, productivity systems",
+    insight: "Insights customized to your personal journey"
+  }
+];
+
+export const UseCasesSection = () => {
+  return (
+    <section className="py-16 sm:py-24">
+      <div className="space-y-12">
+        <div className="text-center space-y-4 max-w-3xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-bold">
+            Transform Any YouTube Video into Actionable Insights
+          </h2>
+          <p className="text-lg text-muted-foreground">
+            Learn from the world's best experts - personalized for your goals
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {useCases.map((useCase) => (
+            <Card 
+              key={useCase.title}
+              className="group relative overflow-hidden border-2 transition-all duration-300 hover:border-primary/50 hover:shadow-lg"
+              style={{ 
+                background: 'linear-gradient(135deg, hsl(var(--card)), hsl(var(--card)))',
+                boxShadow: '0 0 0 1px hsl(var(--border))'
+              }}
+            >
+              <CardHeader>
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-lg bg-primary/10 text-primary">
+                    <useCase.icon className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-xl mb-2">{useCase.title}</CardTitle>
+                    <CardDescription className="text-sm">
+                      {useCase.description}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Example videos: </span>
+                  <span className="text-foreground">{useCase.examples}</span>
+                </div>
+                <div className="text-xs font-medium text-primary">
+                  ✨ {useCase.insight}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
