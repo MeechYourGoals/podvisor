@@ -159,7 +159,16 @@ CRITICAL OUTPUT REQUIREMENTS:
    - Include expert attribution in format: "— [Speaker Name]"
    - Impact score: 1-10 (how transformative is this insight?)
    - Actionability score: 1-10 (how quickly can someone act on this?)
-   - Categories: Use domain-appropriate tags like "Strategy", "Communication", "Mindset", "Technical Skills", "Psychology", "Health", "Performance", "Leadership", etc.
+   - Categories: MUST use one of these EXACT values:
+     • "business" (entrepreneurship, startups, sales, marketing, leadership)
+     • "sports" (athletics, performance, training, competition)
+     • "health_fitness" (nutrition, exercise, wellness, longevity)
+     • "technology" (software, AI, innovation, engineering)
+     • "personal_development" (mindset, habits, psychology, self-improvement)
+     • "finance" (investing, money management, wealth building)
+     • "entertainment" (media, content creation, storytelling)
+     • "education" (learning, teaching, skills development)
+     • "general" (everything else or multi-disciplinary)
 
 2. **Personalized Insights (EXACTLY 10 Required if profile provided)**:
    - Opening context: "For Your [Profile Name]:" with 1-2 sentence bridge connecting the insight to their specific situation
@@ -539,28 +548,60 @@ CRITICAL FORMATTING:
       );
     }
 
-    // 5. Insert insights
+    // 5. Insert insights with validation
     console.log('[analyze-video] Inserting general insights');
-    const insightsToInsert = extractedData.insights.map((insight: any) => ({
-      video_id: video.id,
-      category: insight.category?.toLowerCase().replace(/\s+/g, '_') || 'general',
-      insight_text: insight.insight_text,
-      impact_score: insight.impact_score,
-      actionability_score: insight.actionability_score,
-      expert_attribution: insight.expert_attribution,
-      profile_used: profileUsed
-    }));
+    const validCategories = ['business', 'sports', 'health_fitness', 'technology', 'personal_development', 'finance', 'entertainment', 'education', 'general'];
+    
+    const insightsToInsert = extractedData.insights.map((insight: any) => {
+      let category = insight.category?.toLowerCase().replace(/\s+/g, '_') || 'general';
+      
+      // Validate and normalize category
+      if (!validCategories.includes(category)) {
+        console.warn(`[analyze-video] Invalid category "${insight.category}" normalized to "${category}", defaulting to "general"`);
+        category = 'general';
+      }
+      
+      return {
+        video_id: video.id,
+        category,
+        insight_text: insight.insight_text,
+        impact_score: insight.impact_score,
+        actionability_score: insight.actionability_score,
+        expert_attribution: insight.expert_attribution,
+        profile_used: profileUsed
+      };
+    });
 
     const { error: insightsError } = await supabase
       .from('insights')
       .insert(insightsToInsert);
 
     if (insightsError) {
-      console.error('Error inserting insights:', insightsError);
+      console.error('[analyze-video] Error inserting insights:', insightsError);
+      throw new Error(`Failed to save insights: ${insightsError.message}`);
     }
+    
+    // Verify insertions worked
+    const { count: insightsCount, error: countError } = await supabase
+      .from('insights')
+      .select('*', { count: 'exact', head: true })
+      .eq('video_id', video.id);
+    
+    if (countError) {
+      console.error('[analyze-video] Error counting insights:', countError);
+    }
+    
+    if (!insightsCount || insightsCount === 0) {
+      console.error('[analyze-video] No insights were saved despite successful insert');
+      throw new Error('No insights were saved - possible data validation issue');
+    }
+    
+    console.log(`[analyze-video] Successfully inserted ${insightsCount} insights`);
 
     // 6. Insert personalized insights if profile provided
     console.log('[analyze-video] Inserting personalized insights');
+    let personalizedCount = 0;
+    
     if (userProfile && extractedData.personalized_insights?.length > 0) {
       const personalizedToInsert = extractedData.personalized_insights.map((pInsight: any) => ({
         video_id: video.id,
@@ -577,7 +618,21 @@ CRITICAL FORMATTING:
         .insert(personalizedToInsert);
 
       if (personalizedError) {
-        console.error('Error inserting personalized insights:', personalizedError);
+        console.error('[analyze-video] Error inserting personalized insights:', personalizedError);
+        throw new Error(`Failed to save personalized insights: ${personalizedError.message}`);
+      }
+      
+      // Verify personalized insertions worked
+      const { count: pCount, error: pCountError } = await supabase
+        .from('personalized_insights')
+        .select('*', { count: 'exact', head: true })
+        .eq('video_id', video.id);
+      
+      if (pCountError) {
+        console.error('[analyze-video] Error counting personalized insights:', pCountError);
+      } else {
+        personalizedCount = pCount || 0;
+        console.log(`[analyze-video] Successfully inserted ${personalizedCount} personalized insights`);
       }
     }
 
@@ -593,12 +648,26 @@ CRITICAL FORMATTING:
       // Non-fatal, don't block the response
     }
     
+    // Build warnings array
+    const warnings = [];
+    if (transcriptSource === 'unavailable') {
+      warnings.push('Limited analysis - transcript unavailable');
+    }
+    if (insightsCount < 10) {
+      warnings.push('Some insights failed to save');
+    }
+    if (userProfile && personalizedCount < 10) {
+      warnings.push('Some personalized insights failed to save');
+    }
+    
     return new Response(
       JSON.stringify({
         success: true,
         videoId: video.id,
-        insightCount: extractedData.insights.length,
-        personalizedCount: extractedData.personalized_insights?.length || 0
+        insightCount: insightsCount,
+        personalizedCount: personalizedCount,
+        transcriptAvailable: transcriptSource !== 'unavailable',
+        warnings: warnings.length > 0 ? warnings : undefined
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
