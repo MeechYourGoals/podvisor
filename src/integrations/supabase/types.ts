@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      anonymous_rate_limits: {
+        Row: {
+          created_at: string | null
+          ip_address: string
+          last_reset: string | null
+          video_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          ip_address: string
+          last_reset?: string | null
+          video_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          ip_address?: string
+          last_reset?: string | null
+          video_count?: number | null
+        }
+        Relationships: []
+      }
       bookmark_folders: {
         Row: {
           color: string | null
@@ -563,6 +584,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_anonymous_limits: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       increment_video_count: {
         Args: { p_user_id: string }
         Returns: undefined

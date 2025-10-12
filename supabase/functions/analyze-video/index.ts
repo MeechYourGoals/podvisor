@@ -99,9 +99,9 @@ serve(async (req) => {
 
   try {
     console.log('[analyze-video] Received request');
-    const { videoUrl, profileId, isRefresh, existingVideoId } = await req.json();
+    const { videoUrl, profileId, isRefresh, existingVideoId, migrateData, cachedData, isAnonymous } = await req.json();
     
-    console.log('[analyze-video] Analyzing video:', videoUrl, 'with profile:', profileId, 'isRefresh:', isRefresh);
+    console.log('[analyze-video] Analyzing video:', videoUrl, 'with profile:', profileId, 'isRefresh:', isRefresh, 'migrateData:', migrateData, 'isAnonymous:', isAnonymous);
 
     if (!videoUrl) {
       return new Response(
@@ -569,15 +569,101 @@ CRITICAL FORMATTING:
     console.log('[analyze-video] Resolving user from token');
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
-    const { data: { user } } = await supabase.auth.getUser(token || '');
+    let userId: string | null = null;
 
-    if (!user) {
+    if (token) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      userId = user?.id ?? null;
+    }
+
+    // MIGRATION PATH: Save cached data to DB for new users
+    if (migrateData && userId && cachedData) {
+      console.log('[analyze-video] Migration mode: saving cached data for user', userId);
+      
+      try {
+        // Insert video record
+        const { data: videoRecord, error: videoError } = await supabase
+          .from('videos')
+          .insert({
+            user_id: userId,
+            youtube_url: videoUrl,
+            video_id: cachedData.videoMetadata?.video_id || '',
+            title: cachedData.videoMetadata?.title || 'Untitled Video',
+            thumbnail_url: cachedData.videoMetadata?.thumbnail_url,
+            source_id: sourceId,
+            expert_id: expertId,
+            speakers: cachedData.videoMetadata?.speakers || [],
+            tags: cachedData.videoMetadata?.tags || [],
+            profile_used: 'default',
+          })
+          .select('id')
+          .single();
+
+        if (videoError) throw videoError;
+
+        // Insert insights
+        if (cachedData.insights && Array.isArray(cachedData.insights)) {
+          const insightsToInsert = cachedData.insights.map((insight: any) => ({
+            video_id: videoRecord.id,
+            insight_text: insight.insight_text,
+            impact_score: insight.impact_score,
+            actionability_score: insight.actionability_score,
+            category: insight.category,
+            expert_attribution: insight.expert_attribution,
+            profile_used: 'default',
+          }));
+
+          await supabase.from('insights').insert(insightsToInsert);
+        }
+
+        // Insert personalized insights
+        if (cachedData.personalizedInsights && Array.isArray(cachedData.personalizedInsights)) {
+          const personalizedToInsert = cachedData.personalizedInsights.map((pi: any) => ({
+            video_id: videoRecord.id,
+            insight_text: pi.insight_text,
+            for_profile_context: pi.for_profile_context,
+            relevance_score: pi.relevance_score,
+            action_items: pi.action_items,
+            profile_used: 'default',
+          }));
+
+          await supabase.from('personalized_insights').insert(personalizedToInsert);
+        }
+
+        console.log('[analyze-video] Migration successful for video:', videoRecord.id);
+        
+        return new Response(
+          JSON.stringify({ success: true, videoId: videoRecord.id }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (migrationError) {
+        console.error('[analyze-video] Migration error:', migrationError);
+        return new Response(
+          JSON.stringify({ error: 'Migration failed', details: migrationError }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // ANONYMOUS PATH: Return insights without DB write
+    if (!userId && !migrateData) {
+      console.log('[analyze-video] Anonymous request - will return insights without saving to DB');
+      
+      // Continue with analysis, but skip DB writes later
+      // We'll handle this after AI processing
+    }
+
+    // AUTHENTICATED PATH: Check user authorization
+    if (!userId && !isAnonymous) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    console.log('[analyze-video] User resolved:', user.id);
+    
+    if (userId) {
+      console.log('[analyze-video] User resolved:', userId);
+    }
 
     // Handle refresh mode - delete old insights and update video record
     let video: any;
@@ -628,13 +714,13 @@ CRITICAL FORMATTING:
       
       video = updatedVideo;
       console.log('[analyze-video] Video updated successfully');
-    } else {
-      // 4. Create video record
+    } else if (userId) {
+      // 4. Create video record (only for authenticated users)
       console.log('[analyze-video] Inserting video record');
       const { data: newVideo, error: videoError } = await supabase
         .from('videos')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           title: videoTitle,
           youtube_url: videoUrl,
           video_id: videoId,
@@ -737,10 +823,10 @@ CRITICAL FORMATTING:
 
     console.log('[analyze-video] Success! Returning response');
     
-    // Increment user's video count only if not a refresh
-    if (!isRefresh) {
+    // Increment user's video count only if not a refresh and user is authenticated
+    if (!isRefresh && userId) {
       const { error: incrementError } = await supabase.rpc('increment_video_count', {
-        p_user_id: user.id
+        p_user_id: userId
       });
       
       if (incrementError) {
@@ -766,8 +852,33 @@ CRITICAL FORMATTING:
       warnings.push('Limited analysis - metadata only (no transcript available)');
     }
     
+    // For anonymous users, return insights directly without DB write
+    if (!userId) {
+      console.log('[analyze-video] Anonymous mode: returning insights without DB write');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          videoId: crypto.randomUUID(),
+          insights: normalizedInsights,
+          personalizedInsights: normalizedPersonalized,
+          videoMetadata: {
+            title: videoTitle,
+            video_id: videoId,
+            thumbnail_url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+            speakers: speakers,
+            tags: tags
+          },
+          insightCount: finalInsightCount,
+          personalizedCount: personalizedCount,
+          transcriptSource: transcriptSource,
+          warnings: warnings.length > 0 ? warnings : undefined
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('[analyze-video] Final results:', {
-      videoId: video.id,
+      videoId: video?.id,
       insightCount: finalInsightCount,
       personalizedCount: personalizedCount,
       transcriptSource: transcriptSource,
@@ -777,7 +888,7 @@ CRITICAL FORMATTING:
     return new Response(
       JSON.stringify({
         success: true,
-        videoId: video.id,
+        videoId: video?.id,
         insightCount: finalInsightCount,
         personalizedCount: personalizedCount,
         transcriptSource: transcriptSource,

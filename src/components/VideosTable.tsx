@@ -15,7 +15,8 @@ import {
   Trash2,
   MoreVertical,
   X,
-  Bookmark
+  Bookmark,
+  Sparkles
 } from "lucide-react";
 import { BookmarkDialog } from "./BookmarkDialog";
 import {
@@ -48,13 +49,27 @@ interface Video {
   } | null;
 }
 
+interface AnonymousVideo {
+  id: string;
+  title: string;
+  youtube_url: string;
+  video_id: string;
+  analyzed_at: string;
+  profile_used: string | null;
+  is_favorite?: boolean;
+  tags: string[];
+  speakers: Speaker[];
+}
+
 interface VideosTableProps {
   onVideoSelect: (videoId: string) => void;
   onBookmark: (videoId: string) => void;
   refreshTrigger?: number;
+  isAnonymous?: boolean;
+  anonymousVideos?: AnonymousVideo[];
 }
 
-const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableProps) => {
+const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger, isAnonymous = false, anonymousVideos = [] }: VideosTableProps) => {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,6 +85,13 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
   };
 
   const loadVideos = async () => {
+    if (isAnonymous) {
+      // Load from anonymousVideos prop
+      setVideos(anonymousVideos as any);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from("videos")
@@ -273,6 +295,25 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger }: VideosTableP
   }
 
   if (videos.length === 0) {
+    if (isAnonymous) {
+      return (
+        <Card className="p-12 text-center">
+          <Sparkles className="h-12 w-12 mx-auto text-primary mb-4" />
+          <h3 className="text-xl font-semibold mb-2">
+            Try Podvisor - No Signup Required
+          </h3>
+          <p className="text-muted-foreground mb-6">
+            Paste any YouTube URL above to get AI-powered insights in seconds
+          </p>
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Badge variant="outline">3 free analyses</Badge>
+            <span>•</span>
+            <Badge variant="outline">No credit card</Badge>
+          </div>
+        </Card>
+      );
+    }
+
     return (
       <Card className="p-8 text-center">
         <p className="text-muted-foreground mb-2">No videos analyzed yet.</p>

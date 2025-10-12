@@ -7,6 +7,7 @@ import AnalysisForm from '@/components/AnalysisForm';
 import VideosTable from '@/components/VideosTable';
 import VideoDetail from '@/components/VideoDetail';
 import { WelcomeDialog } from '@/components/WelcomeDialog';
+import { AnonymousUserBanner } from '@/components/AnonymousUserBanner';
 import { UseCasesSection } from '@/components/marketing/UseCasesSection';
 import { HowItWorksSection } from '@/components/marketing/HowItWorksSection';
 import { WhyPodvisorSection } from '@/components/marketing/WhyPodvisorSection';
@@ -17,6 +18,7 @@ import { FinalCTASection } from '@/components/marketing/FinalCTASection';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { AnonymousVideoStorage } from '@/lib/anonymousVideoStorage';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -49,11 +51,8 @@ const Index = () => {
     }
   };
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
-  }, [user, loading, navigate]);
+  // Don't redirect anonymous users - let them use the app
+  // useEffect removed - no auth wall
 
   if (loading) {
     return (
@@ -63,16 +62,21 @@ const Index = () => {
     );
   }
 
-  if (!user) {
-    return null;
-  }
-
   const handleVideoSelect = (videoId: string) => {
     setSelectedVideoId(videoId);
     setVideoDetailOpen(true);
   };
 
   const handleBookmarkVideo = async (videoId: string) => {
+    if (!user) {
+      toast({
+        title: "Sign up to save bookmarks",
+        description: "Create a free account to bookmark videos and save your work",
+      });
+      navigate('/auth');
+      return;
+    }
+
     try {
       const { error } = await (supabase as any)
         .from('bookmarked_videos')
@@ -106,18 +110,24 @@ const Index = () => {
     }
   };
 
+  const isAnonymous = !user;
+  const anonymousVideos = isAnonymous ? AnonymousVideoStorage.getAll() : [];
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
-      <WelcomeDialog />
+      {user && <WelcomeDialog />}
       
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <HeroSection />
+        {isAnonymous && anonymousVideos.length > 0 && <AnonymousUserBanner />}
         <AnalysisForm onAnalysisComplete={() => setRefreshTrigger(prev => prev + 1)} />
         <VideosTable
           onVideoSelect={handleVideoSelect}
           onBookmark={handleBookmarkVideo}
           refreshTrigger={refreshTrigger}
+          isAnonymous={isAnonymous}
+          anonymousVideos={anonymousVideos}
         />
 
         <VideoDetail

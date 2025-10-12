@@ -7,11 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Play, ChevronDown, Sparkles } from 'lucide-react';
+import { Loader2, Play, ChevronDown, Sparkles, Crown } from 'lucide-react';
 import { ProfileQuickSwitcher } from './ProfileQuickSwitcher';
 import { useProfileContext } from '@/contexts/ProfileContext';
+import { useAuth } from '@/hooks/useAuth';
+import { AnonymousVideoStorage } from '@/lib/anonymousVideoStorage';
+import { AnonymousLimitModal } from './AnonymousLimitModal';
 
 const videoSchema = z.object({
   videoUrl: z.string().url('Please enter a valid YouTube URL').includes('youtube.com', { message: 'Please enter a valid YouTube URL' }).or(z.string().includes('youtu.be', { message: 'Please enter a valid YouTube URL' })),
@@ -25,9 +29,15 @@ interface AnalysisFormProps {
 
 const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
   const { activeProfileId } = useProfileContext();
+  const { user } = useAuth();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [limitModalOpen, setLimitModalOpen] = useState(false);
   const { toast } = useToast();
+
+  const isAnonymous = !user;
+  const anonymousCount = isAnonymous ? AnonymousVideoStorage.count() : 0;
+  const canAnalyze = isAnonymous ? AnonymousVideoStorage.canAddMore() : true;
 
   const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema),
@@ -38,12 +48,20 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
   };
 
   const handleAnalyze = async (data: VideoFormData) => {
+    // Check anonymous limit before starting
+    if (isAnonymous && !canAnalyze) {
+      setLimitModalOpen(true);
+      console.log('[Analytics] Anonymous limit reached - modal shown');
+      return;
+    }
+
     setIsAnalyzing(true);
     try {
       const { data: result, error } = await supabase.functions.invoke('analyze-video', {
         body: {
           videoUrl: data.videoUrl,
           profileId: activeProfileId,
+          isAnonymous: isAnonymous,
         },
       });
 
@@ -71,6 +89,31 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
         
         const message = errorMessages[result.error_code] || result.error || 'An error occurred during analysis.';
         throw new Error(message);
+      }
+
+      // For anonymous users, store in sessionStorage
+      if (isAnonymous && result) {
+        const anonymousVideo = {
+          id: result.videoId || crypto.randomUUID(),
+          title: result.videoMetadata?.title || 'Untitled Video',
+          youtube_url: data.videoUrl,
+          video_id: result.videoMetadata?.video_id || '',
+          analyzed_at: new Date().toISOString(),
+          insights: result.insights || [],
+          personalized_insights: result.personalizedInsights || [],
+          speakers: result.videoMetadata?.speakers || [],
+          tags: result.videoMetadata?.tags || [],
+          profile_used: null,
+          thumbnail_url: result.videoMetadata?.thumbnail_url,
+          insightCount: result.insightCount,
+          personalizedCount: result.personalizedCount,
+        };
+
+        AnonymousVideoStorage.add(anonymousVideo);
+        console.log('[Analytics] Anonymous video analysis', {
+          videoCount: AnonymousVideoStorage.count(),
+          timestamp: new Date().toISOString()
+        });
       }
 
       // Success with possible warnings
@@ -114,18 +157,37 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
   };
 
   return (
-    <Card className="mb-8">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Play className="h-5 w-5 text-primary" />
-          Analyze a Video
-        </CardTitle>
-        <CardDescription>
-          Paste any YouTube URL to extract expert insights
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(handleAnalyze)} className="space-y-4">
+    <>
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Play className="h-5 w-5 text-primary" />
+                Analyze a Video
+              </CardTitle>
+              <CardDescription>
+                Paste any YouTube URL to extract expert insights
+              </CardDescription>
+            </div>
+            {isAnonymous && (
+              <Badge variant="secondary" className="gap-1">
+                <Sparkles className="h-3 w-3" />
+                {anonymousCount}/3 free
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isAnonymous && anonymousCount > 0 && (
+            <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg flex items-start gap-2">
+              <Crown className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <p className="text-sm">
+                Sign up to save your analyses, create custom profiles, and get 10 analyses/month (free tier)
+              </p>
+            </div>
+          )}
+          <form onSubmit={handleSubmit(handleAnalyze)} className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="videoUrl">YouTube Video URL</Label>
@@ -153,22 +215,24 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
             )}
           </div>
 
-          <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
-            <CollapsibleTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full justify-between text-muted-foreground hover:text-foreground"
-              >
-                <span className="text-sm">Advanced: Filter through a profile</span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4">
-              <ProfileQuickSwitcher />
-            </CollapsibleContent>
-          </Collapsible>
+          {!isAnonymous && (
+            <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-between text-muted-foreground hover:text-foreground"
+                >
+                  <span className="text-sm">Advanced: Filter through a profile</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-4">
+                <ProfileQuickSwitcher />
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           <Button type="submit" className="w-full" disabled={isAnalyzing}>
             {isAnalyzing ? (
@@ -184,12 +248,17 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
             )}
           </Button>
 
-          <p className="text-xs text-muted-foreground text-center">
-            {activeProfileId ? 'Analyzing with selected profile' : 'Analyzing with your default profile'}
-          </p>
+          {!isAnonymous && (
+            <p className="text-xs text-muted-foreground text-center">
+              {activeProfileId ? 'Analyzing with selected profile' : 'Analyzing with your default profile'}
+            </p>
+          )}
         </form>
       </CardContent>
     </Card>
+
+    <AnonymousLimitModal open={limitModalOpen} onOpenChange={setLimitModalOpen} />
+    </>
   );
 };
 

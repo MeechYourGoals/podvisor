@@ -1,5 +1,6 @@
 import { Sparkles, Brain, Library } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 const HeroSection = () => {
   return (
@@ -18,9 +19,19 @@ const HeroSection = () => {
           Your AI Advisor from YouTube
         </p>
         
-        <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-8 sm:mb-12 max-w-2xl mx-auto px-2">
+        <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-4 max-w-2xl mx-auto px-2">
           Extract personalized insights from any expert video - startup founders, athletes, doctors, educators, and more
         </p>
+
+        <div className="flex items-center justify-center gap-3 mb-8 sm:mb-12">
+          <Badge variant="secondary" className="gap-1 text-xs sm:text-sm px-3 py-1">
+            <Sparkles className="h-3 w-3" />
+            3 free analyses
+          </Badge>
+          <Badge variant="outline" className="text-xs sm:text-sm px-3 py-1">
+            No signup required
+          </Badge>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-lg">

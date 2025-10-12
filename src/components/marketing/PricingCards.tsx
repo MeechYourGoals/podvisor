@@ -13,10 +13,11 @@ const plans = [
     name: 'Free',
     price: '$0',
     period: '/month',
-    headline: 'Perfect for trying out Podvisor',
+    headline: 'Perfect for trying Podvisor',
     icon: Zap,
     features: [
-      '10 video analyses per month',
+      '3 instant analyses (no signup)',
+      '10 analyses/month after signup',
       '3 context profiles',
       'Basic bookmarks',
       '30-day video history',
