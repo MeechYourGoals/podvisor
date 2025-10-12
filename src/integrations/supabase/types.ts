@@ -223,6 +223,7 @@ export type Database = {
           actionability_score: number | null
           category: Database["public"]["Enums"]["profile_category"]
           created_at: string | null
+          expert_attribution: string | null
           id: string
           impact_score: number | null
           insight_text: string
@@ -233,6 +234,7 @@ export type Database = {
           actionability_score?: number | null
           category: Database["public"]["Enums"]["profile_category"]
           created_at?: string | null
+          expert_attribution?: string | null
           id?: string
           impact_score?: number | null
           insight_text: string
@@ -243,6 +245,7 @@ export type Database = {
           actionability_score?: number | null
           category?: Database["public"]["Enums"]["profile_category"]
           created_at?: string | null
+          expert_attribution?: string | null
           id?: string
           impact_score?: number | null
           insight_text?: string
@@ -263,6 +266,7 @@ export type Database = {
         Row: {
           action_items: string[] | null
           created_at: string | null
+          for_profile_context: string | null
           id: string
           insight_text: string
           profile_id: string | null
@@ -273,6 +277,7 @@ export type Database = {
         Insert: {
           action_items?: string[] | null
           created_at?: string | null
+          for_profile_context?: string | null
           id?: string
           insight_text: string
           profile_id?: string | null
@@ -283,6 +288,7 @@ export type Database = {
         Update: {
           action_items?: string[] | null
           created_at?: string | null
+          for_profile_context?: string | null
           id?: string
           insight_text?: string
           profile_id?: string | null

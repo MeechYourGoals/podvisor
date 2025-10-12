@@ -1,8 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Bookmark, Copy, CheckCircle2 } from 'lucide-react';
+import { Bookmark, Copy, CheckCircle2, Lightbulb, Check } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { BookmarkDialog } from './BookmarkDialog';
@@ -14,13 +13,17 @@ interface InsightCardProps {
     category: string;
     impact_score: number;
     actionability_score: number;
+    expert_attribution?: string;
+    for_profile_context?: string;
   };
   onBookmark: (insightId: string) => void;
   isBookmarked?: boolean;
   actionItems?: string[];
+  index?: number;
+  isPersonalized?: boolean;
 }
 
-const InsightCard = ({ insight, onBookmark, isBookmarked, actionItems }: InsightCardProps) => {
+const InsightCard = ({ insight, onBookmark, isBookmarked, actionItems, index, isPersonalized }: InsightCardProps) => {
   const [copied, setCopied] = useState(false);
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -52,12 +55,23 @@ const InsightCard = ({ insight, onBookmark, isBookmarked, actionItems }: Insight
   };
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className={`hover:shadow-md transition-shadow ${isPersonalized ? 'border-l-4 border-l-green-500' : ''}`}>
       <CardContent className="pt-6 space-y-4">
+        {/* Header: Index + Category + Actions */}
         <div className="flex items-start justify-between gap-2">
-          <Badge variant="outline" className={getCategoryColor(insight.category)}>
-            {insight.category}
-          </Badge>
+          <div className="flex items-center gap-3">
+            {index !== undefined && !isPersonalized && (
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-sm font-bold text-primary">#{index + 1}</span>
+              </div>
+            )}
+            {isPersonalized && (
+              <Lightbulb className="h-5 w-5 text-green-500 flex-shrink-0" />
+            )}
+            <Badge variant="outline" className={getCategoryColor(insight.category)}>
+              {insight.category}
+            </Badge>
+          </div>
           <div className="flex gap-1">
             <Button
               size="sm"
@@ -82,38 +96,53 @@ const InsightCard = ({ insight, onBookmark, isBookmarked, actionItems }: Insight
           </div>
         </div>
 
+        {/* Profile Context (for personalized insights) */}
+        {insight.for_profile_context && (
+          <div className="text-sm font-medium text-green-600 dark:text-green-400">
+            {insight.for_profile_context}
+          </div>
+        )}
+
+        {/* Insight Text */}
         <p className="text-sm leading-relaxed text-foreground">
           {insight.insight_text}
         </p>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Impact</span>
-              <span className="font-medium">{insight.impact_score}/10</span>
-            </div>
-            <Progress value={insight.impact_score * 10} className="h-1.5" />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Actionability</span>
-              <span className="font-medium">{insight.actionability_score}/10</span>
-            </div>
-            <Progress value={insight.actionability_score * 10} className="h-1.5" />
-          </div>
+        {/* Expert Attribution */}
+        {insight.expert_attribution && (
+          <p className="text-sm italic text-muted-foreground">
+            — {insight.expert_attribution}
+          </p>
+        )}
+
+        {/* Scores as Pills */}
+        <div className="flex gap-2 flex-wrap">
+          {insight.impact_score !== undefined && (
+            <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+              Impact: {insight.impact_score}/10
+            </Badge>
+          )}
+          {insight.actionability_score !== undefined && (
+            <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
+              Actionability: {insight.actionability_score}/10
+            </Badge>
+          )}
         </div>
 
+        {/* Action Items */}
         {actionItems && actionItems.length > 0 && (
           <div className="pt-3 border-t space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Action Items:</p>
-            <ul className="space-y-1.5">
-              {actionItems.map((item, index) => (
-                <li key={index} className="text-xs flex items-start gap-2">
-                  <span className="text-primary mt-0.5">•</span>
-                  <span className="flex-1">{item}</span>
+            <p className="text-sm font-semibold text-green-600 dark:text-green-400 flex items-center gap-2">
+              <Check className="h-4 w-4" />
+              Action Items:
+            </p>
+            <ol className="space-y-2 list-decimal list-inside">
+              {actionItems.map((item, idx) => (
+                <li key={idx} className="text-sm leading-relaxed">
+                  {item.replace(/^\d+\.\s*/, '')}
                 </li>
               ))}
-            </ul>
+            </ol>
           </div>
         )}
 

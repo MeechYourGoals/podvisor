@@ -40,6 +40,7 @@ interface Insight {
   category: string;
   impact_score: number;
   actionability_score: number;
+  expert_attribution?: string;
 }
 
 interface PersonalizedInsight {
@@ -47,6 +48,7 @@ interface PersonalizedInsight {
   insight_text: string;
   relevance_score: number;
   action_items: string[];
+  for_profile_context?: string;
 }
 
 const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
@@ -293,11 +295,13 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                     No insights available for this video.
                   </p>
                 ) : (
-                  insights.map((insight) => (
+                  insights.map((insight, index) => (
                     <InsightCard
                       key={insight.id}
                       insight={insight}
                       onBookmark={handleBookmarkInsight}
+                      index={index}
+                      isPersonalized={false}
                     />
                   ))
                 )}
@@ -313,7 +317,7 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                     </p>
                   </div>
                 ) : (
-                  personalizedInsights.map((insight) => (
+                  personalizedInsights.map((insight, index) => (
                     <InsightCard
                       key={insight.id}
                       insight={{
@@ -322,9 +326,12 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                         category: 'Personalized',
                         impact_score: insight.relevance_score,
                         actionability_score: insight.relevance_score,
+                        for_profile_context: insight.for_profile_context,
                       }}
                       onBookmark={handleBookmarkInsight}
                       actionItems={insight.action_items}
+                      index={index}
+                      isPersonalized={true}
                     />
                   ))
                 )}

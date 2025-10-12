@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { YoutubeTranscript } from 'https://esm.sh/youtube-transcript@1.0.6';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,6 +52,20 @@ serve(async (req) => {
 
     console.log('[analyze-video] Video metadata:', { videoTitle, channelName });
 
+    // Fetch video transcript
+    console.log('[analyze-video] Fetching transcript');
+    let transcript = '';
+    let transcriptError = null;
+    try {
+      const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
+      transcript = transcriptData.map((item: any) => item.text).join(' ');
+      console.log('[analyze-video] Transcript fetched, length:', transcript.length);
+    } catch (error: any) {
+      transcriptError = error.message;
+      console.warn('[analyze-video] Failed to fetch transcript:', error.message);
+      // Continue without transcript - will use title/description only
+    }
+
     // Get user profile if provided, otherwise get default profile
     console.log('[analyze-video] Resolving user profile');
     let userProfile = null;
@@ -93,41 +108,59 @@ serve(async (req) => {
     }
 
     // Build AI prompt
-    const systemPrompt = `You are an expert at extracting actionable insights from expert videos across ALL domains - business, sports, health, education, creative, technology, finance, and personal development.
+    const systemPrompt = `You are an elite insight extraction AI analyzing expert content across ALL domains - business, sports, health, education, creative, technology, finance, personal development, and more.
 
-Your task is to deeply analyze video content and extract comprehensive, actionable insights that can help someone improve in that domain.
+CRITICAL OUTPUT REQUIREMENTS:
 
-CRITICAL REQUIREMENTS:
-- Extract EXACTLY 10 tactical insights ranked by actionability (1-10) and impact (1-10)
-- Each insight must be 3-4 sentences with specific context and examples
-- Extract the expert's name, domain, credentials, and achievements
-- If user profile is provided, generate EXACTLY 5 personalized insights relevant to their context
-- Use actual data from the video - DO NOT provide mock or placeholder content
-- If you cannot access the video content, return an error`;
+1. **Top Lessons (EXACTLY 10 Required)**:
+   - Each insight: 4-5 sentences with specific examples, concrete advice, and context
+   - Include expert attribution in format: "— [Speaker Name]"
+   - Impact score: 1-10 (how transformative is this insight?)
+   - Actionability score: 1-10 (how quickly can someone act on this?)
+   - Categories: Use domain-appropriate tags like "Strategy", "Communication", "Mindset", "Technical Skills", "Psychology", "Health", "Performance", "Leadership", etc.
 
-    const userPrompt = `Analyze this video:
-URL: ${videoUrl}
+2. **Personalized Insights (EXACTLY 10 Required if profile provided)**:
+   - Opening context: "For Your [Profile Name]:" with 1-2 sentence bridge connecting the insight to their specific situation
+   - Main insight: Full paragraph (4-5 sentences) with concrete examples relevant to their goals and challenges
+   - Impact and Actionability scores (1-10)
+   - EXACTLY 3 numbered action items formatted as:
+     "1. [Specific action with timeline and measurable outcome]"
+     "2. [Second action with concrete steps and resources needed]"
+     "3. [Third action with implementation details and success metrics]"
+   - Relevance score: X/10 (how relevant is this to their specific context?)
+
+3. **Expert Attribution**:
+   - Every insight must end with "— [Expert Name]" or "— [Speaker Name]"
+   - Use the actual speaker's name from the video
+
+QUALITY STANDARDS:
+- NO generic advice - every insight must be specific and actionable
+- Include numbers, frameworks, or step-by-step processes when mentioned
+- Reference specific examples or stories from the video
+- Connect insights to real-world application
+${transcript ? '- Base insights on the ACTUAL TRANSCRIPT provided, not assumptions' : '- Analyze based on title and metadata (transcript unavailable)'}`;
+
+    const userPrompt = `${transcript ? `FULL TRANSCRIPT:\n${transcript.slice(0, 50000)}\n\n` : ''}VIDEO METADATA:
 Title: ${videoTitle}
 Source: ${channelName}
+URL: ${videoUrl}${transcriptError ? `\n\nNote: Transcript unavailable (${transcriptError}). Analyze based on title and available metadata.` : ''}
 
-${userProfile ? `
-USER CONTEXT:
-- Profile: ${userProfile.profile_name}
+${userProfile ? `USER PROFILE (analyze through this lens):
+- Name: ${userProfile.profile_name}
 - Category: ${userProfile.category}
 - Role: ${userProfile.role_description}
-- Experience: ${userProfile.experience_level}
+- Experience Level: ${userProfile.experience_level}
 - Goals: ${userProfile.goals}
-- Challenges: ${userProfile.challenges}
-` : ''}
+- Current Challenges: ${userProfile.challenges}
 
-INSTRUCTIONS:
-1. Analyze the video content and extract real insights
-2. Identify the expert(s) and their domain/credentials
-3. Extract EXACTLY 10 tactical, actionable insights with specific context
-4. ${userProfile ? 'Generate EXACTLY 5 personalized insights tailored to the user\'s profile' : 'Skip personalized insights'}
-5. Rank insights by actionability (1-10) and impact (1-10)
-6. Include expert attribution for each insight
-7. Categorize insights (e.g., Strategy, Execution, Mindset, Technical, Nutrition, Training, etc.)`;
+TASK: Extract EXACTLY 10 universal insights + EXACTLY 10 personalized insights tailored to this profile.` : 'TASK: Extract EXACTLY 10 universal insights (no personalized insights needed).'}
+
+CRITICAL FORMATTING:
+- Every insight must end with "— [Speaker Name]"
+- Each personalized insight must start with "For Your [Profile Name]:"
+- Each personalized insight must have EXACTLY 3 numbered action items
+- Use specific numbers, frameworks, and examples from the video
+- Make insights tactical and immediately actionable`;
 
     // Call Lovable AI with tool calling
     console.log('[analyze-video] Calling Lovable AI API');
@@ -186,42 +219,44 @@ INSTRUCTIONS:
                 },
                 insights: {
                   type: "array",
+                  description: "EXACTLY 10 universal insights",
                   items: {
                     type: "object",
                     properties: {
-                      insight_text: { type: "string", description: "3-4 sentences with specific context" },
-                      category: { type: "string" },
+                      insight_text: { type: "string", description: "4-5 sentences with specific examples and context. Must end with expert attribution: — [Speaker Name]" },
+                      category: { type: "string", description: "Domain-appropriate category (e.g., Strategy, Communication, Psychology, Performance)" },
                       impact_score: { type: "integer", minimum: 1, maximum: 10 },
                       actionability_score: { type: "integer", minimum: 1, maximum: 10 },
-                      expert_attribution: { type: "string" }
+                      expert_attribution: { type: "string", description: "Speaker name only, e.g., 'Jordan Peterson'" }
                     },
-                    required: ["insight_text", "impact_score", "actionability_score"]
+                    required: ["insight_text", "category", "impact_score", "actionability_score", "expert_attribution"]
                   },
                   minItems: 10,
                   maxItems: 10
                 },
                 personalized_insights: {
                   type: "array",
+                  description: "EXACTLY 10 personalized insights if profile provided, otherwise 0",
                   items: {
                     type: "object",
                     properties: {
-                      personalized_text: { type: "string" },
-                      relevance_score: { type: "integer", minimum: 1, maximum: 10 },
+                      for_profile_context: { type: "string", description: "Opening line: 'For Your [Profile Name]:' followed by 1-2 sentence bridge" },
+                      insight_text: { type: "string", description: "4-5 sentence paragraph connecting lesson to user's specific context" },
                       action_items: {
                         type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            action: { type: "string" },
-                            timeline: { type: "string" },
-                            difficulty: { type: "string", enum: ["easy", "medium", "hard"] }
-                          }
-                        }
-                      }
-                    }
+                        description: "EXACTLY 3 numbered action items",
+                        items: { type: "string", description: "Full action description with timeline and success metrics" },
+                        minItems: 3,
+                        maxItems: 3
+                      },
+                      relevance_score: { type: "integer", minimum: 1, maximum: 10 },
+                      impact_score: { type: "integer", minimum: 1, maximum: 10 },
+                      actionability_score: { type: "integer", minimum: 1, maximum: 10 }
+                    },
+                    required: ["for_profile_context", "insight_text", "action_items", "relevance_score", "impact_score", "actionability_score"]
                   },
                   minItems: 0,
-                  maxItems: 5
+                  maxItems: 10
                 }
               },
               required: ["source_name", "expert", "speakers", "tags", "insights"]
@@ -365,6 +400,7 @@ INSTRUCTIONS:
       insight_text: insight.insight_text,
       impact_score: insight.impact_score,
       actionability_score: insight.actionability_score,
+      expert_attribution: insight.expert_attribution,
       profile_used: profileUsed
     }));
 
@@ -382,11 +418,10 @@ INSTRUCTIONS:
       const personalizedToInsert = extractedData.personalized_insights.map((pInsight: any) => ({
         video_id: video.id,
         profile_id: profileId,
-        insight_text: pInsight.personalized_text,
+        for_profile_context: pInsight.for_profile_context,
+        insight_text: pInsight.insight_text,
         relevance_score: pInsight.relevance_score,
-        action_items: pInsight.action_items?.map((a: any) => 
-          typeof a === 'string' ? a : `${a.action} (${a.timeline}, ${a.difficulty})`
-        ) || [],
+        action_items: Array.isArray(pInsight.action_items) ? pInsight.action_items : [],
         profile_used: profileUsed
       }));
 
