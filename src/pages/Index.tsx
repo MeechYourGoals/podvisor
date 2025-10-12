@@ -9,6 +9,7 @@ import VideoDetail from '@/components/VideoDetail';
 import { WelcomeDialog } from '@/components/WelcomeDialog';
 import { UseCasesSection } from '@/components/marketing/UseCasesSection';
 import { HowItWorksSection } from '@/components/marketing/HowItWorksSection';
+import { WhyPodvisorSection } from '@/components/marketing/WhyPodvisorSection';
 import { PricingSection } from '@/components/marketing/PricingSection';
 import { PricingCards } from '@/components/marketing/PricingCards';
 import { TestimonialsSection } from '@/components/marketing/TestimonialsSection';
@@ -129,6 +130,7 @@ const Index = () => {
         <div data-pricing-section>
           <UseCasesSection />
           <HowItWorksSection />
+          <WhyPodvisorSection />
           <PricingSection />
           <PricingCards />
           <TestimonialsSection />
