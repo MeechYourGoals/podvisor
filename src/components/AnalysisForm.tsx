@@ -72,17 +72,28 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
         throw new Error(message);
       }
 
-      // Success with possible warning
+      // Success with possible warnings
+      let successMessage = `Video analyzed! ${result.insightCount || 0} insights extracted.`;
+      
+      if (result.transcriptSource === 'perplexity') {
+        successMessage += ' (AI analysis method)';
+      } else if (result.transcriptSource === 'metadata-only') {
+        successMessage += ' (Limited - metadata only)';
+      }
+      
       toast({
         title: "Success!",
-        description: `Video analyzed! ${result.insightCount || 0} insights extracted.`,
+        description: successMessage,
       });
       
-      if (result?.warning) {
-        toast({
-          title: "Note",
-          description: result.warning,
-          variant: "default",
+      // Show warnings if any
+      if (result?.warnings && Array.isArray(result.warnings)) {
+        result.warnings.forEach((warning: string) => {
+          toast({
+            title: "Note",
+            description: warning,
+            variant: "default",
+          });
         });
       }
 
