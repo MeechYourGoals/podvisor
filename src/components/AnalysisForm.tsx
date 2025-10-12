@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Play, ChevronDown, Sparkles } from 'lucide-react';
 import { ProfileQuickSwitcher } from './ProfileQuickSwitcher';
+import { useProfileContext } from '@/contexts/ProfileContext';
 
 const videoSchema = z.object({
   videoUrl: z.string().url('Please enter a valid YouTube URL').includes('youtube.com', { message: 'Please enter a valid YouTube URL' }).or(z.string().includes('youtu.be', { message: 'Please enter a valid YouTube URL' })),
@@ -23,7 +24,7 @@ interface AnalysisFormProps {
 }
 
 const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
-  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const { activeProfileId } = useProfileContext();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const { toast } = useToast();
@@ -42,7 +43,7 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
       const { data: result, error } = await supabase.functions.invoke('analyze-video', {
         body: {
           videoUrl: data.videoUrl,
-          profileId: selectedProfileId,
+          profileId: activeProfileId,
         },
       });
 
@@ -99,7 +100,6 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
 
       onAnalysisComplete();
       reset();
-      setSelectedProfileId(null);
       setIsAdvancedOpen(false);
     } catch (error: any) {
       console.error('Analysis error:', error);
@@ -166,10 +166,7 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-4">
-              <ProfileQuickSwitcher
-                selectedProfileId={selectedProfileId}
-                onProfileSelect={setSelectedProfileId}
-              />
+              <ProfileQuickSwitcher />
             </CollapsibleContent>
           </Collapsible>
 
@@ -188,7 +185,7 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
           </Button>
 
           <p className="text-xs text-muted-foreground text-center">
-            {selectedProfileId ? 'Analyzing with selected profile' : 'Analyzing with your default profile'}
+            {activeProfileId ? 'Analyzing with selected profile' : 'Analyzing with your default profile'}
           </p>
         </form>
       </CardContent>
