@@ -96,9 +96,9 @@ serve(async (req) => {
 
   try {
     console.log('[analyze-video] Received request');
-    const { videoUrl, profileId } = await req.json();
+    const { videoUrl, profileId, isRefresh, existingVideoId } = await req.json();
     
-    console.log('[analyze-video] Analyzing video:', videoUrl, 'with profile:', profileId);
+    console.log('[analyze-video] Analyzing video:', videoUrl, 'with profile:', profileId, 'isRefresh:', isRefresh);
 
     if (!videoUrl) {
       return new Response(
@@ -583,33 +583,86 @@ CRITICAL FORMATTING:
     }
     console.log('[analyze-video] User resolved:', user.id);
 
-    // 4. Create video record
-    console.log('[analyze-video] Inserting video record');
-    const { data: video, error: videoError } = await supabase
-      .from('videos')
-      .insert({
-        user_id: user.id,
-        title: videoTitle,
-        youtube_url: videoUrl,
-        video_id: videoId,
-        thumbnail_url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-        source_id: sourceId,
-        expert_id: expertId,
-        status: 'completed',
-        profile_used: profileUsed,
-        speakers: extractedData.speakers || [],
-        tags: extractedData.tags || [],
-        is_favorite: false
-      })
-      .select('id')
-      .single();
+    // Handle refresh mode - delete old insights and update video record
+    let video: any;
+    if (isRefresh && existingVideoId) {
+      console.log('[analyze-video] Refresh mode: updating existing video', existingVideoId);
+      
+      // Delete existing insights for this video
+      const { error: deleteInsightsError } = await supabase
+        .from('insights')
+        .delete()
+        .eq('video_id', existingVideoId);
+      
+      if (deleteInsightsError) {
+        console.error('[analyze-video] Error deleting old insights:', deleteInsightsError);
+      }
+      
+      const { error: deletePersonalizedError } = await supabase
+        .from('personalized_insights')
+        .delete()
+        .eq('video_id', existingVideoId);
+      
+      if (deletePersonalizedError) {
+        console.error('[analyze-video] Error deleting old personalized insights:', deletePersonalizedError);
+      }
+      
+      // Update video record with new analyzed_at timestamp and profile_used
+      const { data: updatedVideo, error: updateError } = await supabase
+        .from('videos')
+        .update({
+          analyzed_at: new Date().toISOString(),
+          profile_used: profileUsed,
+          source_id: sourceId,
+          expert_id: expertId,
+          speakers: extractedData.speakers || [],
+          tags: extractedData.tags || [],
+        })
+        .eq('id', existingVideoId)
+        .select('id')
+        .single();
+      
+      if (updateError) {
+        console.error('[analyze-video] Error updating video:', updateError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to update video' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      video = updatedVideo;
+      console.log('[analyze-video] Video updated successfully');
+    } else {
+      // 4. Create video record
+      console.log('[analyze-video] Inserting video record');
+      const { data: newVideo, error: videoError } = await supabase
+        .from('videos')
+        .insert({
+          user_id: user.id,
+          title: videoTitle,
+          youtube_url: videoUrl,
+          video_id: videoId,
+          thumbnail_url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+          source_id: sourceId,
+          expert_id: expertId,
+          status: 'completed',
+          profile_used: profileUsed,
+          speakers: extractedData.speakers || [],
+          tags: extractedData.tags || [],
+          is_favorite: false
+        })
+        .select('id')
+        .single();
 
-    if (videoError) {
-      console.error('Error creating video:', videoError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to save video' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (videoError) {
+        console.error('Error creating video:', videoError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to save video' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      video = newVideo;
     }
 
     // 5. Insert insights with flexible validation
@@ -699,14 +752,18 @@ CRITICAL FORMATTING:
 
     console.log('[analyze-video] Success! Returning response');
     
-    // Increment user's video count
-    const { error: incrementError } = await supabase.rpc('increment_video_count', {
-      p_user_id: user.id
-    });
-    
-    if (incrementError) {
-      console.error('Error incrementing video count:', incrementError);
-      // Non-fatal, don't block the response
+    // Increment user's video count only if not a refresh
+    if (!isRefresh) {
+      const { error: incrementError } = await supabase.rpc('increment_video_count', {
+        p_user_id: user.id
+      });
+      
+      if (incrementError) {
+        console.error('Error incrementing video count:', incrementError);
+        // Non-fatal, don't block the response
+      }
+    } else {
+      console.log('[analyze-video] Skipping video count increment for refresh operation');
     }
     
     // Build warnings array

@@ -5,10 +5,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Youtube, Download, Bookmark, ExternalLink } from 'lucide-react';
+import { Youtube, Download, Bookmark, RefreshCw } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import InsightCard from './InsightCard';
 import { useToast } from '@/hooks/use-toast';
 import { BookmarkDialog } from './BookmarkDialog';
+import { ProfileQuickSwitcher } from './ProfileQuickSwitcher';
 
 interface VideoDetailProps {
   videoId: string | null;
@@ -57,6 +59,9 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
   const [personalizedInsights, setPersonalizedInsights] = useState<PersonalizedInsight[]>([]);
   const [loading, setLoading] = useState(false);
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showProfileSelector, setShowProfileSelector] = useState(false);
+  const [selectedRefreshProfile, setSelectedRefreshProfile] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -141,6 +146,84 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
 
   const handleBookmarkVideo = () => {
     setBookmarkDialogOpen(true);
+  };
+
+  const handleRefreshAnalysis = async () => {
+    if (!video) return;
+    
+    setIsRefreshing(true);
+    setShowProfileSelector(false);
+    
+    try {
+      const { data: result, error } = await supabase.functions.invoke('analyze-video', {
+        body: {
+          videoUrl: video.youtube_url,
+          profileId: selectedRefreshProfile,
+          isRefresh: true,
+          existingVideoId: video.id,
+        },
+      });
+
+      if (error) {
+        if (error.message?.includes('429')) {
+          throw new Error('Rate limit exceeded. Please try again later.');
+        }
+        if (error.message?.includes('402')) {
+          throw new Error('Payment required. Please add credits to continue.');
+        }
+        throw error;
+      }
+
+      if (result?.error_code) {
+        const errorMessages: Record<string, string> = {
+          'AI_NO_CHOICES': "The AI didn't return structured insights. Please try again.",
+          'AI_NO_TOOL_CALL': "The AI didn't return structured insights. Please try again.",
+          'AI_INVALID_STRUCTURE': "The AI returned incomplete data. Please try again.",
+          'TRANSCRIPT_UNAVAILABLE': "No transcript found; using limited metadata.",
+          'AI_GATEWAY_ERROR': result.error || 'AI processing error occurred.',
+          'RATE_LIMIT': 'Rate limit exceeded. Please try again later.',
+          'PAYMENT_REQUIRED': 'Payment required. Please upgrade your plan.',
+        };
+        
+        throw new Error(errorMessages[result.error_code] || result.error);
+      }
+
+      let successMessage = `Insights refreshed! ${result.insightCount || 0} new insights extracted.`;
+      
+      if (result.transcriptSource === 'perplexity') {
+        successMessage += ' (AI analysis method)';
+      } else if (result.transcriptSource === 'metadata-only') {
+        successMessage += ' (Limited - metadata only)';
+      }
+      
+      toast({
+        title: "Success!",
+        description: successMessage,
+      });
+
+      if (result?.warnings && Array.isArray(result.warnings)) {
+        result.warnings.forEach((warning: string) => {
+          toast({
+            title: "Note",
+            description: warning,
+            variant: "default",
+          });
+        });
+      }
+
+      await loadVideoData();
+      setSelectedRefreshProfile(null);
+      
+    } catch (error: any) {
+      console.error('Refresh error:', error);
+      toast({
+        title: "Error",
+        description: error.message || 'Failed to refresh insights',
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleExport = () => {
@@ -254,6 +337,14 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                 <div className="flex gap-2">
                   <Button
                     size="sm"
+                    variant="default"
+                    onClick={() => setShowProfileSelector(!showProfileSelector)}
+                    disabled={isRefreshing}
+                  >
+                    <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+                  </Button>
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => window.open(video.youtube_url, '_blank')}
                   >
@@ -268,6 +359,25 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                   </Button>
                 </div>
               </div>
+              
+              {/* Profile Selector for Refresh */}
+              {showProfileSelector && (
+                <div className="mt-4 p-4 border rounded-lg bg-muted/50">
+                  <p className="text-sm font-medium mb-3">Select a profile to refresh insights:</p>
+                  <ProfileQuickSwitcher
+                    selectedProfileId={selectedRefreshProfile}
+                    onProfileSelect={setSelectedRefreshProfile}
+                  />
+                  <div className="mt-4 flex gap-2">
+                    <Button onClick={handleRefreshAnalysis} disabled={isRefreshing}>
+                      {isRefreshing ? 'Analyzing...' : 'Refresh Now'}
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowProfileSelector(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </SheetHeader>
