@@ -11,6 +11,7 @@ import { Plus, Loader2, Folder, Globe } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useProfileContext } from '@/contexts/ProfileContext';
+import { AuthCallToActionDialog } from './AuthCallToActionDialog';
 
 interface BookmarkDialogProps {
   open: boolean;
@@ -41,6 +42,7 @@ export const BookmarkDialog = ({ open, onOpenChange, videoId, insightId, type }:
   const [newFolderProfileTarget, setNewFolderProfileTarget] = useState<'current' | 'global' | 'other'>('current');
   const [newFolderOtherProfileId, setNewFolderOtherProfileId] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [showAuthCTA, setShowAuthCTA] = useState(false);
   const { toast } = useToast();
   const { activeProfileId, profiles } = useProfileContext();
 
@@ -121,7 +123,10 @@ export const BookmarkDialog = ({ open, onOpenChange, videoId, insightId, type }:
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setShowAuthCTA(true);
+        return;
+      }
 
       let targetProfileId: string | null = null;
       
@@ -415,6 +420,12 @@ export const BookmarkDialog = ({ open, onOpenChange, videoId, insightId, type }:
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <AuthCallToActionDialog
+        open={showAuthCTA}
+        onOpenChange={setShowAuthCTA}
+        context="bookmark"
+      />
     </Dialog>
   );
 };

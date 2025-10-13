@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Youtube, Download, Bookmark, RefreshCw, ChevronDown } from 'lucide-react';
+import { Youtube, Download, Bookmark, RefreshCw, ChevronDown, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import InsightCard from './InsightCard';
@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { BookmarkDialog } from './BookmarkDialog';
 import { ProfileQuickSwitcher } from './ProfileQuickSwitcher';
 import { useProfileContext } from '@/contexts/ProfileContext';
+import { AuthCallToActionDialog } from './AuthCallToActionDialog';
 
 interface VideoDetailProps {
   videoId: string | null;
@@ -66,6 +67,9 @@ const VideoDetail = ({ videoId, open, onOpenChange, isAnonymous = false, anonymo
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showProfileSelector, setShowProfileSelector] = useState(false);
   const [selectedRefreshProfile, setSelectedRefreshProfile] = useState<string | null>(null);
+  const [showAuthCTA, setShowAuthCTA] = useState(false);
+  const [authCTAContext, setAuthCTAContext] = useState<'profile' | 'export' | 'bookmark'>('profile');
+  const [currentTab, setCurrentTab] = useState('all');
   const { toast } = useToast();
   const { activeProfileId, profiles } = useProfileContext();
 
@@ -181,10 +185,8 @@ const VideoDetail = ({ videoId, open, onOpenChange, isAnonymous = false, anonymo
 
   const handleBookmarkVideo = () => {
     if (isAnonymous) {
-      toast({
-        title: "Sign up to bookmark",
-        description: "Create a free account to save bookmarks",
-      });
+      setAuthCTAContext('bookmark');
+      setShowAuthCTA(true);
       return;
     }
     setBookmarkDialogOpen(true);
@@ -299,14 +301,52 @@ const VideoDetail = ({ videoId, open, onOpenChange, isAnonymous = false, anonymo
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async (format: 'json' | 'csv' | 'markdown' = 'markdown') => {
     if (isAnonymous) {
-      toast({
-        title: "Sign up to export",
-        description: "Create a free account to export video insights",
-      });
+      setAuthCTAContext('export');
+      setShowAuthCTA(true);
       return;
     }
+    if (!video || !videoId) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('export-video', {
+        body: { videoId, format },
+      });
+
+      if (error) throw error;
+
+      const blob = new Blob([data.content], { type: data.mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Exported!",
+        description: `Video insights exported as ${format.toUpperCase()}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Export failed",
+        description: error.message || "Failed to export video",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTabChange = (value: string) => {
+    setCurrentTab(value);
+    if (value === 'personal' && isAnonymous) {
+      setAuthCTAContext('profile');
+      setShowAuthCTA(true);
+    }
+  };
+
+  // Old markdown export function (keeping as fallback)
+  const handleLegacyExport = () => {
     if (!video || !insights) return;
 
     const markdown = `# ${video.title}
@@ -467,9 +507,26 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                   <Button size="sm" variant="outline" onClick={handleBookmarkVideo}>
                     <Bookmark className="h-4 w-4" />
                   </Button>
-                  <Button size="sm" variant="outline" onClick={handleExport}>
-                    <Download className="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        <Download className="h-4 w-4 mr-1" />
+                        Export
+                        <ChevronDown className="h-3 w-3 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleExport('json')}>
+                        JSON
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport('csv')}>
+                        CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport('markdown')}>
+                        Markdown
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </>
@@ -484,7 +541,7 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
               ))}
             </div>
           ) : (
-            <Tabs defaultValue="all" className="w-full">
+            <Tabs defaultValue="all" value={currentTab} onValueChange={handleTabChange} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="all">
                   All Insights ({insights.length})
@@ -515,16 +572,35 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
               </TabsContent>
               <TabsContent value="personal" className="space-y-4 mt-4">
                 {personalizedInsights.length === 0 ? (
-                  <div className="text-center py-8 space-y-3">
-                    <p className="text-muted-foreground">
-                      No personalized insights for this video.
-                    </p>
-                    {!activeProfileId && (
-                      <p className="text-sm text-muted-foreground">
-                        Tip: Create and select a profile to unlock personalized insights tailored to your needs!
+                  isAnonymous ? (
+                    <div className="text-center py-12 space-y-4">
+                      <Sparkles className="h-12 w-12 mx-auto text-primary/50" />
+                      <div>
+                        <h3 className="font-semibold text-lg">Unlock Personalized Insights</h3>
+                        <p className="text-muted-foreground text-sm mt-2">
+                          Create custom profiles to get AI insights tailored to your specific role, goals, and challenges
+                        </p>
+                      </div>
+                      <Button onClick={() => {
+                        setAuthCTAContext('profile');
+                        setShowAuthCTA(true);
+                      }}>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Get Started Free
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 space-y-3">
+                      <p className="text-muted-foreground">
+                        No personalized insights for this video.
                       </p>
-                    )}
-                  </div>
+                      {!activeProfileId && (
+                        <p className="text-sm text-muted-foreground">
+                          Tip: Create and select a profile to unlock personalized insights tailored to your needs!
+                        </p>
+                      )}
+                    </div>
+                  )
                 ) : (
                   personalizedInsights.map((insight, index) => (
                     <InsightCard
@@ -554,6 +630,12 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
           onOpenChange={setBookmarkDialogOpen}
           videoId={videoId || undefined}
           type="video"
+        />
+
+        <AuthCallToActionDialog
+          open={showAuthCTA}
+          onOpenChange={setShowAuthCTA}
+          context={authCTAContext}
         />
       </SheetContent>
     </Sheet>
