@@ -1,4 +1,4 @@
-import { Target, TrendingUp, Users, Lightbulb } from 'lucide-react';
+import { Target, TrendingUp, Users, Lightbulb, DollarSign, Heart } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 const useCases = [
@@ -10,11 +10,11 @@ const useCases = [
     insight: "10 tactical insights extracted in 2 minutes"
   },
   {
-    icon: TrendingUp,
-    title: "Athletes & Coaches",
-    description: "Analyze training methodologies from Olympic coaches and pro athletes",
-    examples: "Training videos, sports psychology, performance optimization",
-    insight: "Personalized training insights from world-class experts"
+    icon: DollarSign,
+    title: "Financial Education",
+    description: "Extract investment strategies, market analysis, and wealth-building principles from financial experts",
+    examples: "Bloomberg markets, Yahoo Finance, financial literacy courses, investment podcasts",
+    insight: "Turn hours of financial content into actionable investment insights"
   },
   {
     icon: Users,
@@ -22,6 +22,20 @@ const useCases = [
     description: "Learn negotiation tactics, sales strategies, and leadership principles",
     examples: "Leadership talks, sales training, management seminars",
     insight: "Action items tailored to your role and goals"
+  },
+  {
+    icon: Heart,
+    title: "Health & Wellness",
+    description: "Distill science-backed health protocols from longevity experts and medical researchers",
+    examples: "Dr. Andrew Huberman podcasts, Gary Brecka protocols, Bryan Johnson routines",
+    insight: "Extract personalized health protocols from hour-long expert videos"
+  },
+  {
+    icon: TrendingUp,
+    title: "Athletes & Coaches",
+    description: "Analyze training methodologies from Olympic coaches and pro athletes",
+    examples: "Training videos, sports psychology, performance optimization",
+    insight: "Personalized training insights from world-class experts"
   },
   {
     icon: Lightbulb,
@@ -45,7 +59,7 @@ export const UseCasesSection = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {useCases.map((useCase) => (
             <Card 
               key={useCase.title}
