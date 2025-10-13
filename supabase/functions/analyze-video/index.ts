@@ -155,20 +155,12 @@ serve(async (req) => {
         transcript = await fetchTimedTextTranscript(videoId);
         transcriptSource = 'timedtext';
       } catch (timedtextError) {
-        console.log('[analyze-video] Tier 2 (timedtext) failed, trying Tier 3');
+        console.log('[analyze-video] Tier 2 (timedtext) failed, using metadata-only analysis');
         
-        // Tier 3: Try Perplexity analysis
-        try {
-          transcript = await fetchPerplexityAnalysis(videoUrl, videoTitle);
-          transcriptSource = 'perplexity';
-        } catch (perplexityError) {
-          console.log('[analyze-video] Tier 3 (Perplexity) failed:', perplexityError);
-          
-          // Tier 4: Metadata-only analysis (last resort)
-          console.log('[analyze-video] Using metadata-only analysis');
-          transcript = `Video Title: ${videoTitle}\nChannel: ${channelName}\nURL: ${videoUrl}\n\nNote: No transcript available. This is a metadata-only analysis.`;
-          transcriptSource = 'metadata-only';
-        }
+        // Tier 3: Metadata-only analysis (Perplexity removed for reliability)
+        console.log('[analyze-video] Using metadata-only analysis');
+        transcript = `Video Title: ${videoTitle}\nChannel: ${channelName}\nURL: ${videoUrl}\n\nNote: No transcript available. This is a metadata-only analysis.`;
+        transcriptSource = 'metadata-only';
       }
     }
     
@@ -747,78 +739,87 @@ CRITICAL FORMATTING:
       video = newVideo;
     }
 
-    // 5. Insert insights
-    console.log('[analyze-video] Inserting general insights');
-    
-    const insightsToInsert = normalizedInsights.map((insight: any) => ({
-      video_id: video.id,
-      category: insight.category,
-      insight_text: insight.insight_text,
-      impact_score: insight.impact_score,
-      actionability_score: insight.actionability_score,
-      expert_attribution: insight.expert_attribution,
-      profile_used: profileUsed
-    }));
-
-    const { error: insightsError } = await supabase
-      .from('insights')
-      .insert(insightsToInsert);
-
-    if (insightsError) {
-      console.error('[analyze-video] Error inserting insights:', insightsError);
-      // Log but don't throw - try to continue with partial results
-      console.error('[analyze-video] Insight insertion failed, but continuing...');
-    }
-    
-    // Verify insertions worked
-    const { count: insightsCount, error: countError } = await supabase
-      .from('insights')
-      .select('*', { count: 'exact', head: true })
-      .eq('video_id', video.id);
-    
-    if (countError) {
-      console.error('[analyze-video] Error counting insights:', countError);
-    }
-    
-    const finalInsightCount = insightsCount || 0;
-    console.log(`[analyze-video] Successfully inserted ${finalInsightCount} insights`);
-
-    // 6. Insert personalized insights if profile provided
-    console.log('[analyze-video] Inserting personalized insights');
+    // 5. Insert insights (only for authenticated users with valid video record)
+    let finalInsightCount = 0;
     let personalizedCount = 0;
     
-    if (userProfile && normalizedPersonalized.length > 0) {
-      const personalizedToInsert = normalizedPersonalized.map((pInsight: any) => ({
+    if (userId && video) {
+      console.log('[analyze-video] Inserting general insights');
+      
+      const insightsToInsert = normalizedInsights.map((insight: any) => ({
         video_id: video.id,
-        profile_id: profileId,
-        for_profile_context: pInsight.for_profile_context,
-        insight_text: pInsight.insight_text,
-        relevance_score: pInsight.relevance_score,
-        action_items: pInsight.action_items,
+        category: insight.category,
+        insight_text: insight.insight_text,
+        impact_score: insight.impact_score,
+        actionability_score: insight.actionability_score,
+        expert_attribution: insight.expert_attribution,
         profile_used: profileUsed
       }));
 
-      const { error: personalizedError } = await supabase
-        .from('personalized_insights')
-        .insert(personalizedToInsert);
+      const { error: insightsError } = await supabase
+        .from('insights')
+        .insert(insightsToInsert);
 
-      if (personalizedError) {
-        console.error('[analyze-video] Error inserting personalized insights:', personalizedError);
-        throw new Error(`Failed to save personalized insights: ${personalizedError.message}`);
+      if (insightsError) {
+        console.error('[analyze-video] Error inserting insights:', insightsError);
+        // Log but don't throw - try to continue with partial results
+        console.error('[analyze-video] Insight insertion failed, but continuing...');
       }
       
-      // Verify personalized insertions worked
-      const { count: pCount, error: pCountError } = await supabase
-        .from('personalized_insights')
+      // Verify insertions worked
+      const { count: insightsCount, error: countError } = await supabase
+        .from('insights')
         .select('*', { count: 'exact', head: true })
         .eq('video_id', video.id);
       
-      if (pCountError) {
-        console.error('[analyze-video] Error counting personalized insights:', pCountError);
-      } else {
-        personalizedCount = pCount || 0;
-        console.log(`[analyze-video] Successfully inserted ${personalizedCount} personalized insights`);
+      if (countError) {
+        console.error('[analyze-video] Error counting insights:', countError);
       }
+      
+      finalInsightCount = insightsCount || 0;
+      console.log(`[analyze-video] Successfully inserted ${finalInsightCount} insights`);
+
+      // 6. Insert personalized insights if profile provided
+      console.log('[analyze-video] Inserting personalized insights');
+      
+      if (userProfile && normalizedPersonalized.length > 0) {
+        const personalizedToInsert = normalizedPersonalized.map((pInsight: any) => ({
+          video_id: video.id,
+          profile_id: profileId,
+          for_profile_context: pInsight.for_profile_context,
+          insight_text: pInsight.insight_text,
+          relevance_score: pInsight.relevance_score,
+          action_items: pInsight.action_items,
+          profile_used: profileUsed
+        }));
+
+        const { error: personalizedError } = await supabase
+          .from('personalized_insights')
+          .insert(personalizedToInsert);
+
+        if (personalizedError) {
+          console.error('[analyze-video] Error inserting personalized insights:', personalizedError);
+          throw new Error(`Failed to save personalized insights: ${personalizedError.message}`);
+        }
+        
+        // Verify personalized insertions worked
+        const { count: pCount, error: pCountError } = await supabase
+          .from('personalized_insights')
+          .select('*', { count: 'exact', head: true })
+          .eq('video_id', video.id);
+        
+        if (pCountError) {
+          console.error('[analyze-video] Error counting personalized insights:', pCountError);
+        } else {
+          personalizedCount = pCount || 0;
+          console.log(`[analyze-video] Successfully inserted ${personalizedCount} personalized insights`);
+        }
+      }
+    } else {
+      console.log('[analyze-video] Anonymous user - skipping database insertion');
+      // For anonymous users, use the normalized counts from AI response
+      finalInsightCount = normalizedInsights.length;
+      personalizedCount = normalizedPersonalized.length;
     }
 
     console.log('[analyze-video] Success! Returning response');

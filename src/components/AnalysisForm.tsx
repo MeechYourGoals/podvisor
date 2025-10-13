@@ -44,7 +44,7 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
   });
 
   const useSampleLink = () => {
-    setValue('videoUrl', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    setValue('videoUrl', 'https://www.youtube.com/watch?v=xguam0TKMw8');
   };
 
   const handleAnalyze = async (data: VideoFormData) => {
