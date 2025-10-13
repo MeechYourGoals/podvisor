@@ -134,6 +134,8 @@ const Index = () => {
           videoId={selectedVideoId}
           open={videoDetailOpen}
           onOpenChange={setVideoDetailOpen}
+          isAnonymous={isAnonymous}
+          anonymousVideos={anonymousVideos}
         />
 
         {/* Marketing Sections - Show for all users */}

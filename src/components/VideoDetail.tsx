@@ -18,6 +18,8 @@ interface VideoDetailProps {
   videoId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isAnonymous?: boolean;
+  anonymousVideos?: any[];
 }
 
 interface Speaker {
@@ -55,7 +57,7 @@ interface PersonalizedInsight {
   for_profile_context?: string;
 }
 
-const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
+const VideoDetail = ({ videoId, open, onOpenChange, isAnonymous = false, anonymousVideos = [] }: VideoDetailProps) => {
   const [video, setVideo] = useState<Video | null>(null);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [personalizedInsights, setPersonalizedInsights] = useState<PersonalizedInsight[]>([]);
@@ -78,7 +80,30 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
     setLoading(true);
 
     try {
-      // Load video details
+      // For anonymous users, load from sessionStorage
+      if (isAnonymous) {
+        const anonymousVideo = anonymousVideos.find(v => v.id === videoId);
+        if (anonymousVideo) {
+          setVideo({
+            id: anonymousVideo.id,
+            title: anonymousVideo.title,
+            youtube_url: anonymousVideo.youtube_url,
+            video_id: anonymousVideo.video_id,
+            analyzed_at: anonymousVideo.analyzed_at,
+            profile_used: anonymousVideo.profile_used,
+            speakers: anonymousVideo.speakers || [],
+            tags: anonymousVideo.tags || [],
+            experts: null,
+            content_sources: null
+          });
+          setInsights(anonymousVideo.insights || []);
+          setPersonalizedInsights(anonymousVideo.personalized_insights || []);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // For authenticated users, load from database
       const { data: videoData } = await supabase
         .from('videos')
         .select(`
@@ -123,6 +148,13 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
   };
 
   const handleBookmarkInsight = async (insightId: string) => {
+    if (isAnonymous) {
+      toast({
+        title: "Sign up to bookmark insights",
+        description: "Create a free account to save bookmarks",
+      });
+      return;
+    }
     try {
       const { error } = await (supabase as any)
         .from('bookmarked_insights')
@@ -148,10 +180,24 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
   };
 
   const handleBookmarkVideo = () => {
+    if (isAnonymous) {
+      toast({
+        title: "Sign up to bookmark",
+        description: "Create a free account to save bookmarks",
+      });
+      return;
+    }
     setBookmarkDialogOpen(true);
   };
 
   const handleRefreshAnalysis = async (profileIdOverride?: string | null) => {
+    if (isAnonymous) {
+      toast({
+        title: "Sign up to refresh videos",
+        description: "Create a free account to re-analyze videos with different profiles",
+      });
+      return;
+    }
     if (!video) return;
     
     const profileToUse = profileIdOverride !== undefined ? profileIdOverride : selectedRefreshProfile;
@@ -254,6 +300,13 @@ const VideoDetail = ({ videoId, open, onOpenChange }: VideoDetailProps) => {
   };
 
   const handleExport = () => {
+    if (isAnonymous) {
+      toast({
+        title: "Sign up to export",
+        description: "Create a free account to export video insights",
+      });
+      return;
+    }
     if (!video || !insights) return;
 
     const markdown = `# ${video.title}
