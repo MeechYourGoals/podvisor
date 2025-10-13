@@ -13,12 +13,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const profileSchema = z.object({
-  profile_name: z.string().min(1, 'Profile name is required'),
+  profile_name: z.string()
+    .min(1, 'Profile name is required')
+    .max(100, 'Profile name must be less than 100 characters'),
   category: z.enum(['business', 'sports', 'health_fitness', 'technology', 'personal_development', 'finance', 'entertainment', 'education', 'general']),
-  role_description: z.string().min(1, 'Current role is required'),
+  role_description: z.string()
+    .min(1, 'Current role is required')
+    .max(200, 'Role description must be less than 200 characters'),
   experience_level: z.enum(['beginner', 'intermediate', 'advanced', 'expert']),
-  goals: z.string().min(10, 'Please describe your goals (at least 10 characters)'),
-  challenges: z.string().min(1, 'Please describe your challenges'),
+  goals: z.string()
+    .min(10, 'Please describe your goals (at least 10 characters)')
+    .max(1000, 'Goals must be less than 1000 characters'),
+  challenges: z.string()
+    .min(1, 'Please describe your challenges')
+    .max(1000, 'Challenges must be less than 1000 characters'),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;

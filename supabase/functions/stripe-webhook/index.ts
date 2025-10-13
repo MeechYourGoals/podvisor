@@ -2,6 +2,11 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import Stripe from 'https://esm.sh/stripe@14.21.0'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
   apiVersion: '2023-10-16',
 })
@@ -61,7 +66,8 @@ serve(async (req) => {
           })
           .eq('user_id', userId)
 
-        console.log('Subscription updated for user:', userId, 'to tier:', tier)
+        const redactedUserId = `${userId.substring(0, 8)}...${userId.substring(userId.length - 4)}`;
+        console.log('Subscription created for user:', redactedUserId, 'with tier:', tier);
         break
       }
 
@@ -82,12 +88,28 @@ serve(async (req) => {
         }
 
         // Determine tier from subscription items
-        const tierMap: Record<string, string> = {
-          // You'll need to populate this with your actual price IDs
-        }
+      const tierMap: Record<string, string> = {
+        // TODO: Replace these with your actual Stripe price IDs from dashboard
+        // Example format:
+        // 'price_1ABC123': 'pro',
+        // 'price_1XYZ789': 'team',
+      }
 
-        const priceId = subscription.items.data[0]?.price.id
-        const tier = tierMap[priceId] || 'free'
+      const priceId = subscription.items.data[0]?.price.id;
+      
+      // Critical: Don't default to 'free' - this would downgrade paying customers
+      if (!priceId || !tierMap[priceId]) {
+        console.error('Unknown price ID received:', priceId, 'Available mappings:', Object.keys(tierMap));
+        return new Response(
+          JSON.stringify({ 
+            error: 'Unknown subscription tier - price ID not configured in tierMap',
+            priceId: priceId 
+          }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
+      
+      const tier = tierMap[priceId];
 
         await supabaseAdmin
           .from('user_subscriptions')
@@ -98,7 +120,8 @@ serve(async (req) => {
           })
           .eq('user_id', userSub.user_id)
 
-        console.log('Subscription updated for user:', userSub.user_id)
+        const redactedId = `${userSub.user_id.substring(0, 8)}...${userSub.user_id.substring(userSub.user_id.length - 4)}`;
+        console.log('Subscription updated for user:', redactedId);
         break
       }
 
@@ -128,7 +151,8 @@ serve(async (req) => {
           })
           .eq('user_id', userSub.user_id)
 
-        console.log('Subscription cancelled for user:', userSub.user_id)
+        const redactedId = `${userSub.user_id.substring(0, 8)}...${userSub.user_id.substring(userSub.user_id.length - 4)}`;
+        console.log('Subscription cancelled for user:', redactedId);
         break
       }
 

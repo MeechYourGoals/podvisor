@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { YoutubeTranscript } from 'https://esm.sh/youtube-transcript@1.0.6';
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,16 +100,62 @@ serve(async (req) => {
 
   try {
     console.log('[analyze-video] Received request');
-    const { videoUrl, profileId, isRefresh, existingVideoId, migrateData, cachedData, isAnonymous } = await req.json();
     
-    console.log('[analyze-video] Analyzing video:', videoUrl, 'with profile:', profileId, 'isRefresh:', isRefresh, 'migrateData:', migrateData, 'isAnonymous:', isAnonymous);
+    // Security: Validate all inputs with strict schema
+    const analyzeVideoSchema = z.object({
+      videoUrl: z.string()
+        .url({ message: 'Invalid URL format' })
+        .regex(/^https:\/\/(?:www\.)?youtube\.com\/watch\?v=[a-zA-Z0-9_-]{11}/, {
+          message: 'Only YouTube video URLs are supported (format: https://www.youtube.com/watch?v=VIDEO_ID)'
+        })
+        .max(500, 'URL too long'),
+      profileId: z.string().uuid().optional().nullable(),
+      isRefresh: z.boolean().optional(),
+      existingVideoId: z.string().uuid().optional().nullable(),
+      migrateData: z.boolean().optional(),
+      isAnonymous: z.boolean().optional(),
+      cachedData: z.object({
+        insights: z.array(z.any()).max(50).optional(),
+        personalizedInsights: z.array(z.any()).max(50).optional(),
+        videoMetadata: z.object({
+          title: z.string().max(500),
+          video_id: z.string().max(20),
+          speakers: z.array(z.any()).max(20).optional(),
+          tags: z.array(z.string().max(50)).max(20).optional(),
+          thumbnail_url: z.string().url().optional(),
+        }).optional(),
+      }).optional(),
+    });
 
-    if (!videoUrl) {
+    let body;
+    try {
+      body = await req.json();
+    } catch (error) {
       return new Response(
-        JSON.stringify({ error: 'Video URL is required' }),
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const validationResult = analyzeVideoSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      console.error('Input validation failed:', validationResult.error.issues);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid input parameters',
+          details: validationResult.error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          }))
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { videoUrl, profileId, isRefresh, existingVideoId, migrateData, cachedData, isAnonymous } = validationResult.data;
+    
+    console.log('[analyze-video] Analyzing video:', videoUrl, 'with profile:', profileId, 'isRefresh:', isRefresh, 'migrateData:', migrateData, 'isAnonymous:', isAnonymous);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

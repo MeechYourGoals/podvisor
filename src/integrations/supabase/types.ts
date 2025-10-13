@@ -46,7 +46,7 @@ export type Database = {
           profile_id: string | null
           sort_order: number | null
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           color?: string | null
@@ -58,7 +58,7 @@ export type Database = {
           profile_id?: string | null
           sort_order?: number | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           color?: string | null
@@ -70,7 +70,7 @@ export type Database = {
           profile_id?: string | null
           sort_order?: number | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -89,7 +89,7 @@ export type Database = {
           id: string
           insight_id: string | null
           notes: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string | null
@@ -97,7 +97,7 @@ export type Database = {
           id?: string
           insight_id?: string | null
           notes?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string | null
@@ -105,7 +105,7 @@ export type Database = {
           id?: string
           insight_id?: string | null
           notes?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -130,7 +130,7 @@ export type Database = {
           folder_id: string | null
           id: string
           notes: string | null
-          user_id: string | null
+          user_id: string
           video_id: string | null
         }
         Insert: {
@@ -138,7 +138,7 @@ export type Database = {
           folder_id?: string | null
           id?: string
           notes?: string | null
-          user_id?: string | null
+          user_id: string
           video_id?: string | null
         }
         Update: {
@@ -146,7 +146,7 @@ export type Database = {
           folder_id?: string | null
           id?: string
           notes?: string | null
-          user_id?: string | null
+          user_id?: string
           video_id?: string | null
         }
         Relationships: [
@@ -386,7 +386,7 @@ export type Database = {
           profile_name: string
           role_description: string
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           category: Database["public"]["Enums"]["profile_category"]
@@ -398,7 +398,7 @@ export type Database = {
           profile_name: string
           role_description: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           category?: Database["public"]["Enums"]["profile_category"]
@@ -410,7 +410,7 @@ export type Database = {
           profile_name?: string
           role_description?: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -522,7 +522,7 @@ export type Database = {
           thumbnail_url: string | null
           title: string
           updated_at: string | null
-          user_id: string | null
+          user_id: string
           video_id: string
           youtube_url: string
         }
@@ -540,7 +540,7 @@ export type Database = {
           thumbnail_url?: string | null
           title: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
           video_id: string
           youtube_url: string
         }
@@ -558,7 +558,7 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
           video_id?: string
           youtube_url?: string
         }
