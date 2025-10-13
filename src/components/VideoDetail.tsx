@@ -501,8 +501,11 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                 ) : (
                   insights.map((insight, index) => (
                     <InsightCard
-                      key={insight.id}
-                      insight={insight}
+                      key={insight.id || `${videoId}-i-${index}`}
+                      insight={{
+                        ...insight,
+                        id: insight.id || `${videoId}-i-${index}`
+                      }}
                       onBookmark={handleBookmarkInsight}
                       index={index}
                       isPersonalized={false}
@@ -525,9 +528,9 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                 ) : (
                   personalizedInsights.map((insight, index) => (
                     <InsightCard
-                      key={insight.id}
+                      key={insight.id || `${videoId}-pi-${index}`}
                       insight={{
-                        id: insight.id,
+                        id: insight.id || `${videoId}-pi-${index}`,
                         insight_text: insight.insight_text,
                         category: 'Personalized',
                         impact_score: insight.relevance_score,

@@ -121,7 +121,11 @@ const Index = () => {
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <HeroSection />
         {isAnonymous && anonymousVideos.length > 0 && <AnonymousUserBanner />}
-        <AnalysisForm onAnalysisComplete={() => setRefreshTrigger(prev => prev + 1)} />
+        <AnalysisForm onAnalysisComplete={(videoId) => {
+          setRefreshTrigger(prev => prev + 1);
+          setSelectedVideoId(videoId);
+          setVideoDetailOpen(true);
+        }} />
         <VideosTable
           onVideoSelect={handleVideoSelect}
           onBookmark={handleBookmarkVideo}

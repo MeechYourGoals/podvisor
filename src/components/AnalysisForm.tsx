@@ -24,7 +24,7 @@ const videoSchema = z.object({
 type VideoFormData = z.infer<typeof videoSchema>;
 
 interface AnalysisFormProps {
-  onAnalysisComplete: () => void;
+  onAnalysisComplete: (videoId: string, isAnonymous: boolean) => void;
 }
 
 const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
@@ -45,6 +45,12 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
 
   const useSampleLink = () => {
     setValue('videoUrl', 'https://www.youtube.com/watch?v=xguam0TKMw8');
+    // Immediately trigger analysis after setting sample URL
+    setTimeout(() => {
+      if (!isAnalyzing) {
+        handleSubmit(handleAnalyze)();
+      }
+    }, 0);
   };
 
   const handleAnalyze = async (data: VideoFormData) => {
@@ -93,14 +99,26 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
 
       // For anonymous users, store in sessionStorage
       if (isAnonymous && result) {
+        // Add unique IDs to insights and personalized insights
+        const insightsWithIds = (result.insights || []).map((insight: any) => ({
+          ...insight,
+          id: insight.id || crypto.randomUUID()
+        }));
+        
+        const personalizedInsightsWithIds = (result.personalizedInsights || []).map((insight: any) => ({
+          ...insight,
+          id: insight.id || crypto.randomUUID()
+        }));
+
+        const videoId = result.videoId || crypto.randomUUID();
         const anonymousVideo = {
-          id: result.videoId || crypto.randomUUID(),
+          id: videoId,
           title: result.videoMetadata?.title || 'Untitled Video',
           youtube_url: data.videoUrl,
           video_id: result.videoMetadata?.video_id || '',
           analyzed_at: new Date().toISOString(),
-          insights: result.insights || [],
-          personalized_insights: result.personalizedInsights || [],
+          insights: insightsWithIds,
+          personalized_insights: personalizedInsightsWithIds,
           speakers: result.videoMetadata?.speakers || [],
           tags: result.videoMetadata?.tags || [],
           profile_used: null,
@@ -114,6 +132,12 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
           videoCount: AnonymousVideoStorage.count(),
           timestamp: new Date().toISOString()
         });
+
+        // Call completion callback with video ID and anonymous flag
+        onAnalysisComplete(videoId, true);
+      } else if (result?.videoId) {
+        // For authenticated users, call with videoId from database
+        onAnalysisComplete(result.videoId, false);
       }
 
       // Success with possible warnings
@@ -141,7 +165,7 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
         });
       }
 
-      onAnalysisComplete();
+      // Note: onAnalysisComplete is now called earlier in the anonymous/authenticated blocks
       reset();
       setIsAdvancedOpen(false);
     } catch (error: any) {
