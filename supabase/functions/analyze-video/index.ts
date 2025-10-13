@@ -105,8 +105,8 @@ serve(async (req) => {
     const analyzeVideoSchema = z.object({
       videoUrl: z.string()
         .url({ message: 'Invalid URL format' })
-        .regex(/^https:\/\/(?:www\.)?youtube\.com\/watch\?v=[a-zA-Z0-9_-]{11}/, {
-          message: 'Only YouTube video URLs are supported (format: https://www.youtube.com/watch?v=VIDEO_ID)'
+        .regex(/^https:\/\/(?:(?:www|m)\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?$/, {
+          message: 'Only YouTube video URLs are supported'
         })
         .max(500, 'URL too long'),
       profileId: z.string().uuid().optional().nullable(),
