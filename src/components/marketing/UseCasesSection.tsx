@@ -84,7 +84,7 @@ export const UseCasesSection = () => {
                   <span className="text-foreground">{useCase.examples}</span>
                 </div>
                 <div className="text-xs font-medium text-primary">
-                  ✨ {useCase.insight}
+                  🎙️ {useCase.insight}
                 </div>
               </CardContent>
             </Card>
