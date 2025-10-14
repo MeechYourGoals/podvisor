@@ -15,6 +15,7 @@ interface AnonymousVideo {
 }
 
 const STORAGE_KEY = 'podvisor_anonymous_videos';
+const PROFILE_STORAGE_KEY = 'podvisor_anonymous_profile';
 const MAX_ANONYMOUS_VIDEOS = 3;
 
 export const AnonymousVideoStorage = {
@@ -67,5 +68,30 @@ export const AnonymousVideoStorage = {
 
   getRemaining: (): number => {
     return MAX_ANONYMOUS_VIDEOS - AnonymousVideoStorage.count();
+  },
+
+  getAnonymousProfile: (): string | null => {
+    try {
+      return sessionStorage.getItem(PROFILE_STORAGE_KEY);
+    } catch (error) {
+      console.error('Error reading anonymous profile:', error);
+      return null;
+    }
+  },
+
+  setAnonymousProfile: (profile: string): void => {
+    try {
+      sessionStorage.setItem(PROFILE_STORAGE_KEY, profile);
+    } catch (error) {
+      console.error('Error saving anonymous profile:', error);
+    }
+  },
+
+  clearAnonymousProfile: (): void => {
+    try {
+      sessionStorage.removeItem(PROFILE_STORAGE_KEY);
+    } catch (error) {
+      console.error('Error clearing anonymous profile:', error);
+    }
   }
 };

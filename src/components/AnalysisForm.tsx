@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Play, ChevronDown, Sparkles, Crown } from 'lucide-react';
@@ -32,7 +33,12 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
   const { user } = useAuth();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [isPersonalizedOpen, setIsPersonalizedOpen] = useState(false);
   const [limitModalOpen, setLimitModalOpen] = useState(false);
+  const [anonymousProfile, setAnonymousProfile] = useState(() => {
+    // Load from sessionStorage if exists
+    return AnonymousVideoStorage.getAnonymousProfile() || '';
+  });
   const { toast } = useToast();
 
   const isAnonymous = !user;
@@ -63,11 +69,17 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
 
     setIsAnalyzing(true);
     try {
+      // Save anonymous profile to sessionStorage if provided
+      if (isAnonymous && anonymousProfile.trim()) {
+        AnonymousVideoStorage.setAnonymousProfile(anonymousProfile.trim());
+      }
+
       const { data: result, error } = await supabase.functions.invoke('analyze-video', {
         body: {
           videoUrl: data.videoUrl,
           profileId: activeProfileId,
           isAnonymous: isAnonymous,
+          anonymousProfile: isAnonymous && anonymousProfile.trim() ? anonymousProfile.trim() : undefined,
         },
       });
 
@@ -239,7 +251,40 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
             )}
           </div>
 
-          {!isAnonymous && (
+          {isAnonymous ? (
+            <Collapsible open={isPersonalizedOpen} onOpenChange={setIsPersonalizedOpen}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-between text-muted-foreground hover:text-foreground"
+                >
+                  <span className="text-sm flex items-center gap-2">
+                    <Sparkles className="h-3 w-3" />
+                    Get Personalized Insights (Optional)
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isPersonalizedOpen ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-4 space-y-2">
+                <Label htmlFor="anonymousProfile" className="text-sm">
+                  Tell us about yourself for personalized insights
+                </Label>
+                <Textarea
+                  id="anonymousProfile"
+                  placeholder="Example: I'm a startup founder interested in AI and venture capital..."
+                  value={anonymousProfile}
+                  onChange={(e) => setAnonymousProfile(e.target.value)}
+                  disabled={isAnalyzing}
+                  className="min-h-[80px]"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Optional: Add context to get 10 personalized insights tailored to your goals
+                </p>
+              </CollapsibleContent>
+            </Collapsible>
+          ) : (
             <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
               <CollapsibleTrigger asChild>
                 <Button

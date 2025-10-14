@@ -114,6 +114,7 @@ serve(async (req) => {
       existingVideoId: z.string().uuid().optional().nullable(),
       migrateData: z.boolean().optional(),
       isAnonymous: z.boolean().optional(),
+      anonymousProfile: z.string().max(1000).optional(),
       cachedData: z.object({
         insights: z.array(z.any()).max(50).optional(),
         personalizedInsights: z.array(z.any()).max(50).optional(),
@@ -153,9 +154,9 @@ serve(async (req) => {
       );
     }
 
-    const { videoUrl, profileId, isRefresh, existingVideoId, migrateData, cachedData, isAnonymous } = validationResult.data;
+    const { videoUrl, profileId, isRefresh, existingVideoId, migrateData, cachedData, isAnonymous, anonymousProfile } = validationResult.data;
     
-    console.log('[analyze-video] Analyzing video:', videoUrl, 'with profile:', profileId, 'isRefresh:', isRefresh, 'migrateData:', migrateData, 'isAnonymous:', isAnonymous);
+    console.log('[analyze-video] Analyzing video:', videoUrl, 'with profile:', profileId, 'isRefresh:', isRefresh, 'migrateData:', migrateData, 'isAnonymous:', isAnonymous, 'anonymousProfile:', anonymousProfile ? 'provided' : 'not provided');
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -218,7 +219,19 @@ serve(async (req) => {
     let userProfile = null;
     let profileUsed = 'default';
     
-    if (profileId) {
+    if (anonymousProfile) {
+      // Use anonymous profile provided by user
+      userProfile = {
+        profile_name: 'Your Profile',
+        category: 'general',
+        role_description: anonymousProfile,
+        experience_level: 'varied',
+        goals: 'Personalized learning based on context',
+        challenges: 'Various'
+      };
+      profileUsed = 'anonymous';
+      console.log('[analyze-video] Using anonymous profile:', anonymousProfile);
+    } else if (profileId) {
       const { data } = await supabase
         .from('user_context_profiles')
         .select('*')
@@ -254,13 +267,16 @@ serve(async (req) => {
       }
     }
 
-    // Build AI prompt
+    // Build AI prompt with flexibility for metadata-only mode
     const systemPrompt = `You are an elite insight extraction AI analyzing expert content across ALL domains - business, sports, health, education, creative, technology, finance, personal development, and more.
 
 CRITICAL OUTPUT REQUIREMENTS:
 
 1. **Top Lessons (EXACTLY 10 Required)**:
    - Each insight: 4-5 sentences with specific examples, concrete advice, and context
+   ${transcriptSource === 'metadata-only' 
+     ? '- METADATA-ONLY MODE: Make informed inferences based on video title, channel, and topic. Be transparent about inference vs. direct quotes.'
+     : '- Base insights on ACTUAL TRANSCRIPT content with specific examples from the video'}
    - Include expert attribution in format: "— [Speaker Name]"
    - Impact score: 1-10 (how transformative is this insight?)
    - Actionability score: 1-10 (how quickly can someone act on this?)
@@ -279,6 +295,9 @@ CRITICAL OUTPUT REQUIREMENTS:
 2. **Personalized Insights (EXACTLY 10 Required if profile provided)**:
    - Opening context: "For Your [Profile Name]:" with 1-2 sentence bridge connecting the insight to their specific situation
    - Main insight: Full paragraph (4-5 sentences) with concrete examples relevant to their goals and challenges
+   ${transcriptSource === 'metadata-only'
+     ? '- METADATA-ONLY MODE: Focus on how the video topic relates to their profile. Make strategic inferences about likely content.'
+     : '- Connect specific video content to their unique situation and goals'}
    - Impact and Actionability scores (1-10)
    - EXACTLY 3 numbered action items formatted as:
      "1. [Specific action with timeline and measurable outcome]"
@@ -288,19 +307,28 @@ CRITICAL OUTPUT REQUIREMENTS:
 
 3. **Expert Attribution**:
    - Every insight must end with "— [Expert Name]" or "— [Speaker Name]"
-   - Use the actual speaker's name from the video
+   - Use the actual speaker's name from the video or channel
 
-QUALITY STANDARDS:
+${transcriptSource === 'metadata-only' 
+  ? `
+METADATA-ONLY MODE GUIDELINES:
+- Generate 10 universal insights based on what experts in this domain typically discuss
+- If profile provided, generate 10 personalized insights connecting the topic to their goals
+- Be strategic and inference-based while remaining valuable and actionable
+- Frame insights as "likely topics covered" or "key considerations in this domain"
+- Maintain high quality standards but acknowledge the limited data available`
+  : `
+QUALITY STANDARDS (FULL TRANSCRIPT MODE):
 - NO generic advice - every insight must be specific and actionable
 - Include numbers, frameworks, or step-by-step processes when mentioned
 - Reference specific examples or stories from the video
 - Connect insights to real-world application
-${transcript ? '- Base insights on the ACTUAL TRANSCRIPT provided, not assumptions' : '- Analyze based on title and metadata (transcript unavailable)'}`;
+- Base all insights on ACTUAL TRANSCRIPT content`}`;
 
-    const userPrompt = `${transcript ? `FULL TRANSCRIPT:\n${transcript.slice(0, 50000)}\n\n` : ''}VIDEO METADATA:
+    const userPrompt = `${transcript && transcriptSource !== 'metadata-only' ? `FULL TRANSCRIPT:\n${transcript.slice(0, 50000)}\n\n` : ''}VIDEO METADATA:
 Title: ${videoTitle}
 Source: ${channelName}
-URL: ${videoUrl}${transcriptSource === 'unavailable' ? `\n\nNote: Transcript unavailable. Analyze based on title and available metadata.` : ''}
+URL: ${videoUrl}${transcriptSource === 'metadata-only' ? `\n\nIMPORTANT: No transcript available. Generate insights based on the video title, channel expertise, and typical content in this domain.` : ''}
 
 ${userProfile ? `USER PROFILE (analyze through this lens):
 - Name: ${userProfile.profile_name}
@@ -316,7 +344,9 @@ CRITICAL FORMATTING:
 - Every insight must end with "— [Speaker Name]"
 - Each personalized insight must start with "For Your [Profile Name]:"
 - Each personalized insight must have EXACTLY 3 numbered action items
-- Use specific numbers, frameworks, and examples from the video
+${transcriptSource === 'metadata-only' 
+  ? '- Make informed inferences about what this video likely covers based on the title and source'
+  : '- Use specific numbers, frameworks, and examples from the video transcript'}
 - Make insights tactical and immediately actionable`;
 
     // Call Lovable AI with tool calling (Startup Advisor pattern)
