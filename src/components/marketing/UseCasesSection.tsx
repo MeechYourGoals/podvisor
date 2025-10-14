@@ -48,13 +48,13 @@ const useCases = [
 
 export const UseCasesSection = () => {
   return (
-    <section className="py-16 sm:py-24">
-      <div className="space-y-12">
-        <div className="text-center space-y-4 max-w-3xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold">
-            Transform Any YouTube Video into Actionable Insights
+    <section className="py-12 border-t border-border">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center space-y-3 mb-12">
+          <h2 className="text-3xl font-display font-bold">
+            Who Uses Podvisor
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-muted-foreground">
             Learn from the world's best experts - personalized for your goals
           </p>
         </div>
@@ -63,13 +63,9 @@ export const UseCasesSection = () => {
           {useCases.map((useCase) => (
             <Card 
               key={useCase.title}
-              className="group relative overflow-hidden border-2 transition-all duration-300 hover:border-primary/50 hover:shadow-lg"
-              style={{ 
-                background: 'linear-gradient(135deg, hsl(var(--card)), hsl(var(--card)))',
-                boxShadow: '0 0 0 1px hsl(var(--border))'
-              }}
+              className="border rounded-xl p-6 hover:border-primary hover:shadow-md transition-all"
             >
-              <CardHeader>
+              <CardHeader className="p-0 mb-4">
                 <div className="flex items-start gap-4">
                   <div className="p-3 rounded-lg bg-primary/10 text-primary">
                     <useCase.icon className="h-6 w-6" />
@@ -82,7 +78,7 @@ export const UseCasesSection = () => {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="p-0 space-y-3">
                 <div className="text-sm">
                   <span className="text-muted-foreground">Example videos: </span>
                   <span className="text-foreground">{useCase.examples}</span>

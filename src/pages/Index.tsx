@@ -10,11 +10,9 @@ import { WelcomeDialog } from '@/components/WelcomeDialog';
 import { AnonymousUserBanner } from '@/components/AnonymousUserBanner';
 import { UseCasesSection } from '@/components/marketing/UseCasesSection';
 import { HowItWorksSection } from '@/components/marketing/HowItWorksSection';
-import { WhyPodvisorSection } from '@/components/marketing/WhyPodvisorSection';
 import { PricingSection } from '@/components/marketing/PricingSection';
 import { PricingCards } from '@/components/marketing/PricingCards';
 import { TestimonialsSection } from '@/components/marketing/TestimonialsSection';
-import { FinalCTASection } from '@/components/marketing/FinalCTASection';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -118,7 +116,7 @@ const Index = () => {
       <AppHeader />
       {user && <WelcomeDialog />}
       
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
         <HeroSection />
         {isAnonymous && anonymousVideos.length > 0 && <AnonymousUserBanner />}
         <AnalysisForm onAnalysisComplete={(videoId) => {
@@ -142,16 +140,16 @@ const Index = () => {
           anonymousVideos={anonymousVideos}
         />
 
-        {/* Marketing Sections - Show for all users */}
-        <div data-pricing-section>
-          <UseCasesSection />
-          <HowItWorksSection />
-          <WhyPodvisorSection />
-          <PricingSection />
-          <PricingCards />
-          <TestimonialsSection />
-          <FinalCTASection />
-        </div>
+        {/* Marketing Sections - Show for anonymous users */}
+        {isAnonymous && (
+          <div className="mt-16 space-y-12 max-w-5xl mx-auto">
+            <UseCasesSection />
+            <HowItWorksSection />
+            <TestimonialsSection />
+            <PricingSection />
+            <PricingCards />
+          </div>
+        )}
       </div>
     </div>
   );

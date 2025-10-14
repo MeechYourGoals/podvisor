@@ -194,7 +194,7 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
 
   return (
     <>
-      <Card className="mb-8">
+      <Card className="mb-8 border-2 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -207,8 +207,7 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
               </CardDescription>
             </div>
             {isAnonymous && (
-              <Badge variant="secondary" className="gap-1">
-                <Sparkles className="h-3 w-3" />
+              <Badge variant="secondary" className="text-xs">
                 {anonymousCount}/3 free
               </Badge>
             )}
@@ -216,10 +215,9 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
         </CardHeader>
         <CardContent>
           {isAnonymous && anonymousCount > 0 && (
-            <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg flex items-start gap-2">
-              <Crown className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <div className="mb-4 p-3 bg-muted/50 border rounded-lg">
               <p className="text-sm">
-                Sign up to save your analyses, create custom profiles, and get 10 analyses/month (free tier)
+                <strong>Free trial active:</strong> Sign up to save analyses and unlock 10/month
               </p>
             </div>
           )}
