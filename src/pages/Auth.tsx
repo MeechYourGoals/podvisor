@@ -26,11 +26,21 @@ const authSchema = z.object({
     .regex(/[0-9]/, { message: 'Password must contain at least one number' })
 });
 
+const resetSchema = z.object({
+  email: z.string()
+    .trim()
+    .min(1, 'Email is required')
+    .email({ message: 'Invalid email address' })
+    .max(255, { message: 'Email must be less than 255 characters' }),
+});
+
 type AuthFormData = z.infer<typeof authSchema>;
+type ResetFormData = z.infer<typeof resetSchema>;
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { user, signIn, signUp } = useAuth();
+  const [activeTab, setActiveTab] = useState('signin');
+  const { user, signIn, signUp, requestPasswordReset } = useAuth();
   const navigate = useNavigate();
   
   const signInForm = useForm<AuthFormData>({
@@ -46,6 +56,13 @@ const Auth = () => {
     defaultValues: {
       email: '',
       password: '',
+    },
+  });
+
+  const resetForm = useForm<ResetFormData>({
+    resolver: zodResolver(resetSchema),
+    defaultValues: {
+      email: '',
     },
   });
 
@@ -77,6 +94,18 @@ const Auth = () => {
     }
   };
 
+  const handlePasswordReset = async (data: ResetFormData) => {
+    setIsLoading(true);
+    try {
+      await requestPasswordReset(data.email);
+      resetForm.reset();
+    } catch (error) {
+      toast.error('Failed to send reset email. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-accent/10 to-background p-4">
       <Card className="w-full max-w-md shadow-xl">
@@ -93,10 +122,11 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="reset">Reset</TabsTrigger>
             </TabsList>
             <TabsContent value="signin">
               <Form {...signInForm}>
@@ -135,6 +165,15 @@ const Auth = () => {
                       </FormItem>
                     )}
                   />
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('reset')}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Signing in...' : 'Sign In'}
                   </Button>
@@ -180,6 +219,35 @@ const Auth = () => {
                   />
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Creating account...' : 'Create Account'}
+                  </Button>
+                </form>
+              </Form>
+            </TabsContent>
+            <TabsContent value="reset">
+              <Form {...resetForm}>
+                <form onSubmit={resetForm.handleSubmit(handlePasswordReset)} className="space-y-4">
+                  <FormField
+                    control={resetForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="you@example.com"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="text-sm text-muted-foreground">
+                    Enter your email to receive a password reset link
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? 'Sending...' : 'Send Reset Link'}
                   </Button>
                 </form>
               </Form>
