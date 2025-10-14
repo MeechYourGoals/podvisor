@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -60,11 +61,14 @@ export const BookmarksSection = () => {
   const [newFolderDesc, setNewFolderDesc] = useState('');
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
       loadData();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
@@ -238,6 +242,27 @@ ${i.notes ? `\n**Notes**: ${i.notes}` : ''}
       description: "Folder exported as Markdown",
     });
   };
+
+  if (!user) {
+    return (
+      <div className="space-y-4 text-center py-8">
+        <Folder className="h-12 w-12 text-muted-foreground mx-auto" />
+        <div>
+          <h3 className="text-base font-semibold mb-2">Save Videos & Insights</h3>
+          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+            Create folders, bookmark videos, and organize insights. 
+            Sign up to start building your knowledge library.
+          </p>
+        </div>
+        <Button 
+          onClick={() => navigate('/auth')} 
+          size="lg"
+        >
+          Sign Up to Save Bookmarks
+        </Button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

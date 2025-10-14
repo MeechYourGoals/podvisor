@@ -4,12 +4,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { AnonymousVideoStorage } from '@/lib/anonymousVideoStorage';
 import { Loader2 } from 'lucide-react';
 
 export const DefaultProfileSection = () => {
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -20,16 +22,23 @@ export const DefaultProfileSection = () => {
     setIsLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      setUser(user);
 
-      const { data, error } = await supabase
-        .from('user_default_profiles')
-        .select('description')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      if (user) {
+        // Authenticated: Load from database
+        const { data, error } = await supabase
+          .from('user_default_profiles')
+          .select('description')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-      if (error) throw error;
-      if (data) setDescription(data.description);
+        if (error) throw error;
+        if (data) setDescription(data.description);
+      } else {
+        // Anonymous: Load from sessionStorage
+        const savedProfile = AnonymousVideoStorage.getAnonymousProfile();
+        if (savedProfile) setDescription(savedProfile);
+      }
     } catch (error: any) {
       console.error('Error loading default profile:', error);
     } finally {
@@ -49,25 +58,33 @@ export const DefaultProfileSection = () => {
 
     setIsSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (user) {
+        // Authenticated: Save to database
+        const { error } = await supabase
+          .from('user_default_profiles')
+          .upsert({
+            user_id: user.id,
+            description: description.trim(),
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'user_id'
+          });
 
-      const { error } = await supabase
-        .from('user_default_profiles')
-        .upsert({
-          user_id: user.id,
-          description: description.trim(),
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id'
+        if (error) throw error;
+
+        toast({
+          title: "Success!",
+          description: "Your default profile has been saved",
         });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success!",
-        description: "Your default profile has been saved",
-      });
+      } else {
+        // Anonymous: Save to sessionStorage
+        AnonymousVideoStorage.setAnonymousProfile(description.trim());
+        
+        toast({
+          title: "Profile saved for this session!",
+          description: "Sign up to save permanently across devices",
+        });
+      }
     } catch (error: any) {
       console.error('Error saving default profile:', error);
       toast({
@@ -110,6 +127,11 @@ export const DefaultProfileSection = () => {
         <p className="text-xs text-muted-foreground">
           Tell us who you are and what you want to achieve from these analyses
         </p>
+        {!user && (
+          <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
+            💡 This profile is saved for your current session. Sign up to save it permanently.
+          </div>
+        )}
       </div>
 
       <Button 

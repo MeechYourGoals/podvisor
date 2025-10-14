@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -10,12 +11,42 @@ import { Loader2, LogOut, Mail, User, Upload } from 'lucide-react';
 
 export const AccountSection = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [displayName, setDisplayName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+
+  if (!user) {
+    return (
+      <div className="space-y-4 text-center py-8">
+        <h3 className="text-base font-semibold">Create Your Account</h3>
+        <p className="text-sm text-muted-foreground">
+          Sign up to save your profile, bookmarks, and analysis history
+        </p>
+        <div className="space-y-3 max-w-sm mx-auto pt-4">
+          <Button 
+            onClick={() => navigate('/auth')} 
+            className="w-full"
+            size="lg"
+          >
+            Sign Up Free
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <button 
+              onClick={() => navigate('/auth')}
+              className="text-primary hover:underline font-medium"
+            >
+              Sign In
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (user) {
