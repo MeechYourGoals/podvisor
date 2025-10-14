@@ -8,7 +8,7 @@ import VideosTable from '@/components/VideosTable';
 import VideoDetail from '@/components/VideoDetail';
 import { WelcomeDialog } from '@/components/WelcomeDialog';
 import { AnonymousUserBanner } from '@/components/AnonymousUserBanner';
-import { UseCasesSection } from '@/components/marketing/UseCasesSection';
+import { ComparisonSection } from '@/components/marketing/ComparisonSection';
 import { HowItWorksSection } from '@/components/marketing/HowItWorksSection';
 import { PricingSection } from '@/components/marketing/PricingSection';
 import { PricingCards } from '@/components/marketing/PricingCards';
@@ -143,7 +143,7 @@ const Index = () => {
         {/* Marketing Sections - Show for anonymous users */}
         {isAnonymous && (
           <div className="mt-16 space-y-12 max-w-5xl mx-auto">
-            <UseCasesSection />
+            <ComparisonSection />
             <HowItWorksSection />
             <TestimonialsSection />
             <PricingSection />
