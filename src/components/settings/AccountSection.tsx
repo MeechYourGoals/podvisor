@@ -19,6 +19,12 @@ export const AccountSection = () => {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (user) {
+      loadProfile();
+    }
+  }, [user]);
+
   if (!user) {
     return (
       <div className="space-y-4 text-center py-8">
@@ -47,12 +53,6 @@ export const AccountSection = () => {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (user) {
-      loadProfile();
-    }
-  }, [user]);
 
   const loadProfile = async () => {
     if (!user) return;
