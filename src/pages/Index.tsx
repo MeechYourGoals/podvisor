@@ -143,16 +143,20 @@ const Index = () => {
           anonymousVideos={anonymousVideos}
         />
 
-        {/* Marketing Sections - Show for anonymous users */}
+        {/* Marketing Sections - Show for anonymous users only */}
         {isAnonymous && (
           <div className="mt-20 space-y-16 max-w-5xl mx-auto">
             <ComparisonSection />
             <HowItWorksSection />
             <TestimonialsSection />
-            <PricingSection />
-            <PricingCards />
           </div>
         )}
+
+        {/* Pricing Sections - Show for everyone */}
+        <div className="mt-20 space-y-16 max-w-5xl mx-auto">
+          <PricingSection />
+          <PricingCards />
+        </div>
         </div>
       </div>
     </div>
