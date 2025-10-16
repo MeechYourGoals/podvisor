@@ -112,11 +112,14 @@ const Index = () => {
   const anonymousVideos = isAnonymous ? AnonymousVideoStorage.getAll() : [];
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppHeader />
-      {user && <WelcomeDialog />}
+    <div className="relative min-h-screen bg-background overflow-hidden">
+      <div className="fixed inset-0 bg-gradient-mesh opacity-20 blur-3xl pointer-events-none"></div>
       
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
+      <div className="relative">
+        <AppHeader />
+        {user && <WelcomeDialog />}
+        
+        <div className="container mx-auto px-4 py-6 max-w-6xl">
         <HeroSection />
         {isAnonymous && anonymousVideos.length > 0 && <AnonymousUserBanner />}
         <AnalysisForm onAnalysisComplete={(videoId) => {
@@ -142,7 +145,7 @@ const Index = () => {
 
         {/* Marketing Sections - Show for anonymous users */}
         {isAnonymous && (
-          <div className="mt-16 space-y-12 max-w-5xl mx-auto">
+          <div className="mt-20 space-y-16 max-w-5xl mx-auto">
             <ComparisonSection />
             <HowItWorksSection />
             <TestimonialsSection />
@@ -150,6 +153,7 @@ const Index = () => {
             <PricingCards />
           </div>
         )}
+        </div>
       </div>
     </div>
   );

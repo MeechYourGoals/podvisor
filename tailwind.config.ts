@@ -66,6 +66,17 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "1.5rem",
+        "2xl": "2rem",
+      },
+      boxShadow: {
+        glass: "0 8px 32px 0 rgba(31, 38, 135, 0.15)",
+        glow: "0 0 20px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--primary) / 0.1)",
+        "glow-lg": "0 0 30px hsl(var(--primary) / 0.4), 0 0 60px hsl(var(--primary) / 0.2)",
+      },
+      backgroundImage: {
+        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+        "gradient-mesh": "radial-gradient(at 40% 20%, hsl(28 100% 74% / 0.3) 0px, transparent 50%), radial-gradient(at 80% 0%, hsl(189 100% 56% / 0.3) 0px, transparent 50%), radial-gradient(at 0% 50%, hsl(355 100% 93% / 0.3) 0px, transparent 50%)",
       },
       keyframes: {
         "accordion-down": {

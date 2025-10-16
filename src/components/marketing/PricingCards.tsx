@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { AnimatedBorderCard } from '@/components/ui/animated-border-card';
 import { Check, Crown, Zap, Loader2, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -112,13 +113,15 @@ export const PricingCards = () => {
   };
 
   return (
-    <section className="py-16 sm:py-24 border-t border-border">
-      <div className="space-y-12">
+    <section className="relative py-20 sm:py-28 border-t border-border overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-mesh opacity-30 blur-3xl"></div>
+      
+      <div className="relative space-y-16">
         <div className="text-center space-y-4">
-          <h2 className="text-3xl sm:text-4xl font-bold">
+          <h2 className="text-4xl sm:text-5xl font-bold font-display">
             Start Learning Smarter Today
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-xl text-muted-foreground">
             Choose the plan that fits your needs
           </p>
         </div>
@@ -128,72 +131,79 @@ export const PricingCards = () => {
             const Icon = plan.icon;
             const isLoading = loadingTier === plan.tier;
             
+            const CardWrapper = plan.popular ? AnimatedBorderCard : 'div';
+            
             return (
-              <Card
-                key={plan.tier}
-                className={`relative flex flex-col transition-all duration-300 ${
-                  plan.popular 
-                    ? 'border-2 border-primary shadow-xl scale-105 md:scale-110' 
-                    : 'border-2 border-border hover:border-primary/50'
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-sm px-4 py-1 rounded-full font-semibold whitespace-nowrap">
-                    Most Popular
-                  </div>
-                )}
-                
-                <CardHeader className="text-center space-y-4">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                    <CardDescription className="text-sm mt-2">
-                      {plan.headline}
-                    </CardDescription>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-baseline justify-center gap-1">
-                      <span className="text-4xl font-bold">{plan.price}</span>
-                      <span className="text-muted-foreground">{plan.period}</span>
+              <CardWrapper key={plan.tier}>
+                <Card
+                  className={`glass-card relative flex flex-col transition-all duration-300 rounded-2xl h-full ${
+                    plan.popular 
+                      ? 'border-2 border-primary/50 hover:shadow-glow-lg scale-105 md:scale-110' 
+                      : 'border-2 border-border/50 hover:border-primary/50 hover:scale-105'
+                  }`}
+                >
+                  {plan.popular && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent text-primary-foreground text-sm px-5 py-1.5 rounded-full font-semibold whitespace-nowrap shadow-glow">
+                      Most Popular
                     </div>
-                  </div>
-                </CardHeader>
+                  )}
+                  
+                  <CardHeader className="text-center space-y-4 p-8">
+                    <div className={`mx-auto w-14 h-14 rounded-2xl flex items-center justify-center ${
+                      plan.popular 
+                        ? 'bg-gradient-to-br from-primary/20 to-accent/20' 
+                        : 'bg-primary/10'
+                    }`}>
+                      <Icon className="h-7 w-7 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                      <CardDescription className="text-sm mt-2">
+                        {plan.headline}
+                      </CardDescription>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-baseline justify-center gap-1">
+                        <span className="text-5xl font-bold">{plan.price}</span>
+                        <span className="text-muted-foreground text-lg">{plan.period}</span>
+                      </div>
+                    </div>
+                  </CardHeader>
 
-                <CardContent className="flex-1">
-                  <ul className="space-y-3">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-3 text-sm">
-                        <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
+                  <CardContent className="flex-1 p-8 pt-0">
+                    <ul className="space-y-3">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-3 text-sm">
+                          <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
 
-                <CardFooter>
-                  <Button
-                    className="w-full"
-                    variant={plan.variant}
-                    size="lg"
-                    onClick={() => handleUpgrade(plan.tier)}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        {plan.tier !== 'free' && <ExternalLink className="mr-2 h-4 w-4" />}
-                        {plan.cta}
-                      </>
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
+                  <CardFooter className="p-8 pt-0">
+                    <Button
+                      className="w-full transition-all duration-300 hover:scale-105"
+                      variant={plan.variant}
+                      size="lg"
+                      onClick={() => handleUpgrade(plan.tier)}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          {plan.tier !== 'free' && <ExternalLink className="mr-2 h-4 w-4" />}
+                          {plan.cta}
+                        </>
+                      )}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </CardWrapper>
             );
           })}
         </div>

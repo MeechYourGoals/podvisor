@@ -1,101 +1,151 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AnimatedBorderCard } from '@/components/ui/animated-border-card';
+import { Clock, XCircle, CheckCircle, RefreshCw, FolderOpen, Sparkles } from 'lucide-react';
 
 export const ComparisonSection = () => {
-  const manualPainPoints = [
-    { text: "Find & copy YouTube transcript", time: "2-5 mins" },
-    { text: "Craft the perfect prompt explaining your context", time: "3-5 mins" },
-    { text: "Get ONE perspective - must repeat for different viewpoints", time: "" },
-    { text: "Iterate & refine prompts, re-paste content", time: "10-15 mins/iteration" },
-    { text: "No organized history - manually save everything", time: "" },
-  ];
-
-  const podvisorBenefits = [
-    { text: "Paste URL, done - no transcript hunting", time: "10 seconds" },
-    { text: "Your context saved automatically in profiles", time: "" },
-    { text: "20 perspectives instantly - all at once", time: "" },
-    { text: "Switch contexts with one click - instant refresh", time: "2 seconds" },
-    { text: "Auto-saved library with bookmarks & folders", time: "" },
-  ];
-
   return (
-    <section className="py-16">
-      <div className="text-center mb-12 space-y-3">
-        <h2 className="text-4xl font-display font-bold tracking-tight">
-          Why Podvisor vs. ChatGPT/NotebookLM?
+    <section className="relative py-20 space-y-10 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-mesh opacity-30 blur-3xl"></div>
+      
+      <div className="relative text-center space-y-4 max-w-3xl mx-auto">
+        <h2 className="text-5xl font-bold font-display">
+          Why Podvisor vs. Manual AI Workflows?
         </h2>
-        <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-          ChatGPT and NotebookLM are amazing - but for extracting insights from videos, 
-          here's why Podvisor is <span className="font-semibold text-foreground">10x faster and more comprehensive</span>
+        <p className="text-xl text-muted-foreground leading-relaxed">
+          ChatGPT and NotebookLM are amazing — but for extracting insights from videos, here's why Podvisor is 10x faster and more comprehensive
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-        {/* Manual Way Card */}
-        <Card className="border-2 border-muted bg-muted/30">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <XCircle className="h-6 w-6 text-destructive" />
-              <CardTitle className="text-2xl">The Manual Way</CardTitle>
+      <div className="relative grid md:grid-cols-2 gap-8">
+        {/* Manual Way - Left Card */}
+        <Card className="glass-card border-2 border-destructive/30 hover:shadow-glass transition-all duration-300 rounded-2xl">
+          <CardHeader className="space-y-3 p-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-xl bg-destructive/10">
+                <XCircle className="h-7 w-7 text-destructive" />
+              </div>
+              <CardTitle className="text-3xl">The Manual Way</CardTitle>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <CardDescription className="text-base">
               Using ChatGPT, Gemini, Perplexity, or NotebookLM
-            </p>
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              {manualPainPoints.map((point, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <span className="text-muted-foreground mt-1 flex-shrink-0">😓</span>
-                  <div className="flex-1">
-                    <p className="text-sm leading-relaxed">{point.text}</p>
-                    {point.time && (
-                      <p className="text-xs text-muted-foreground mt-1">{point.time}</p>
-                    )}
-                  </div>
+          <CardContent className="space-y-5 p-8 pt-0">
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">😓</span>
+                <div>
+                  <p className="font-semibold text-lg">Find & Copy Transcript</p>
+                  <p className="text-sm text-muted-foreground mt-1">Manually copy YouTube transcript or upload to AI tool</p>
+                  <p className="text-xs text-destructive font-medium mt-2">⏱️ 2-5 minutes</p>
                 </div>
-              ))}
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">📝</span>
+                <div>
+                  <p className="font-semibold text-lg">Craft Perfect Prompt</p>
+                  <p className="text-sm text-muted-foreground mt-1">Write detailed prompt explaining your context and what you need</p>
+                  <p className="text-xs text-destructive font-medium mt-2">⏱️ 3-5 minutes</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">👁️</span>
+                <div>
+                  <p className="font-semibold text-lg">One Perspective Only</p>
+                  <p className="text-sm text-muted-foreground mt-1">Get insights from ONE angle - must repeat entire process for different viewpoints</p>
+                  <p className="text-xs text-destructive font-medium mt-2">⏱️ Per perspective</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🔄</span>
+                <div>
+                  <p className="font-semibold text-lg">Iterate & Refine</p>
+                  <p className="text-sm text-muted-foreground mt-1">Revise prompts, re-paste content, clarify questions</p>
+                  <p className="text-xs text-destructive font-medium mt-2">⏱️ 10-15 mins per iteration</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">📂</span>
+                <div>
+                  <p className="font-semibold text-lg">No History</p>
+                  <p className="text-sm text-muted-foreground mt-1">Lose your analysis unless you manually save/organize it</p>
+                </div>
+              </div>
             </div>
-            <div className="pt-4 border-t">
-              <p className="text-sm font-semibold text-muted-foreground">
-                ⏱️ Total Time: <span className="text-destructive">20-40+ minutes per video, per perspective</span>
-              </p>
+            <div className="pt-5 border-t border-destructive/20">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-destructive" />
+                <p className="text-lg font-bold text-destructive">Total: 20-40+ minutes per video, per perspective</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Podvisor Way Card */}
-        <Card className="border-2 border-primary bg-gradient-to-br from-primary/5 to-accent/5">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle2 className="h-6 w-6 text-primary" />
-              <CardTitle className="text-2xl">The Podvisor Way</CardTitle>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              One URL, Multiple Expert Perspectives
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              {podvisorBenefits.map((benefit, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <span className="mt-1 flex-shrink-0">✨</span>
-                  <div className="flex-1">
-                    <p className="text-sm leading-relaxed font-medium">{benefit.text}</p>
-                    {benefit.time && (
-                      <p className="text-xs text-primary mt-1">{benefit.time}</p>
-                    )}
+        {/* Podvisor Way - Right Card */}
+        <AnimatedBorderCard>
+          <Card className="glass-card border-2 border-primary/50 hover:shadow-glow-lg transition-all duration-300 rounded-2xl h-full">
+            <CardHeader className="space-y-3 p-8">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
+                  <CheckCircle className="h-7 w-7 text-primary" />
+                </div>
+                <CardTitle className="text-3xl">The Podvisor Way</CardTitle>
+              </div>
+              <CardDescription className="text-base">
+                One URL, Multiple Expert Perspectives
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5 p-8 pt-0">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">✨</span>
+                  <div>
+                    <p className="font-semibold text-lg">Paste URL, Done</p>
+                    <p className="text-sm text-muted-foreground mt-1">One click - no transcript hunting</p>
+                    <p className="text-xs text-primary font-medium mt-2">⏱️ 10 seconds</p>
                   </div>
                 </div>
-              ))}
-            </div>
-            <div className="pt-4 border-t border-primary/20">
-              <p className="text-sm font-semibold">
-                ⏱️ Total Time: <span className="text-primary">2 minutes per video, unlimited perspectives</span>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">🎯</span>
+                  <div>
+                    <p className="font-semibold text-lg">Context Saved</p>
+                    <p className="text-sm text-muted-foreground mt-1">Your role, goals, and preferences remembered automatically</p>
+                    <p className="text-xs text-primary font-medium mt-2">⏱️ Set once, use forever</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Sparkles className="h-6 w-6 text-primary shrink-0" />
+                  <div>
+                    <p className="font-semibold text-lg">20 Perspectives Instantly</p>
+                    <p className="text-sm text-muted-foreground mt-1">10 universal + 10 personalized insights - all at once, no re-prompting</p>
+                    <p className="text-xs text-primary font-medium mt-2">⏱️ Simultaneous</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <RefreshCw className="h-6 w-6 text-primary shrink-0" />
+                  <div>
+                    <p className="font-semibold text-lg">Switch Contexts Easily</p>
+                    <p className="text-sm text-muted-foreground mt-1">Analyze same video as founder, marketer, or athlete - instant refresh</p>
+                    <p className="text-xs text-primary font-medium mt-2">⏱️ 5 seconds to refresh</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <FolderOpen className="h-6 w-6 text-primary shrink-0" />
+                  <div>
+                    <p className="font-semibold text-lg">Organized Library</p>
+                    <p className="text-sm text-muted-foreground mt-1">Auto-saved history with bookmarks and folders</p>
+                  </div>
+                </div>
+              </div>
+              <div className="pt-5 border-t border-primary/20">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary" />
+                  <p className="text-lg font-bold text-primary">Total: 2 minutes per video, unlimited perspectives</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </AnimatedBorderCard>
       </div>
     </section>
   );
