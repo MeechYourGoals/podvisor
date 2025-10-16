@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedBorderCard } from '@/components/ui/animated-border-card';
-import { Clock, XCircle, CheckCircle, RefreshCw, FolderOpen, Sparkles } from 'lucide-react';
+import { Clock, XCircle, CheckCircle } from 'lucide-react';
 
 export const ComparisonSection = () => {
   return (
@@ -100,47 +100,47 @@ export const ComparisonSection = () => {
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">✨</span>
                   <div>
-                    <p className="font-semibold text-lg">Paste URL, Done</p>
-                    <p className="text-sm text-muted-foreground mt-1">One click - no transcript hunting</p>
-                    <p className="text-xs text-primary font-medium mt-2">⏱️ 10 seconds</p>
+                    <p className="font-semibold text-lg text-white">Paste URL, Done</p>
+                    <p className="text-sm text-white/90 mt-1">One click - no transcript hunting</p>
+                    <p className="text-xs text-white font-semibold mt-2 bg-white/10 px-2 py-0.5 rounded-md inline-block">⏱️ 10 seconds</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">🎯</span>
                   <div>
-                    <p className="font-semibold text-lg">Context Saved</p>
-                    <p className="text-sm text-muted-foreground mt-1">Your role, goals, and preferences remembered automatically</p>
-                    <p className="text-xs text-primary font-medium mt-2">⏱️ Set once, use forever</p>
+                    <p className="font-semibold text-lg text-white">Context Saved</p>
+                    <p className="text-sm text-white/90 mt-1">Your role, goals, and preferences remembered automatically</p>
+                    <p className="text-xs text-white font-semibold mt-2 bg-white/10 px-2 py-0.5 rounded-md inline-block">⏱️ Set once, use forever</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Sparkles className="h-6 w-6 text-primary shrink-0" />
+                  <span className="text-2xl">✨</span>
                   <div>
-                    <p className="font-semibold text-lg">20 Perspectives Instantly</p>
-                    <p className="text-sm text-muted-foreground mt-1">10 universal + 10 personalized insights - all at once, no re-prompting</p>
-                    <p className="text-xs text-primary font-medium mt-2">⏱️ Simultaneous</p>
+                    <p className="font-semibold text-lg text-white">20 Perspectives Instantly</p>
+                    <p className="text-sm text-white/90 mt-1">10 universal + 10 personalized insights - all at once, no re-prompting</p>
+                    <p className="text-xs text-white font-semibold mt-2 bg-white/10 px-2 py-0.5 rounded-md inline-block">⏱️ Simultaneous</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <RefreshCw className="h-6 w-6 text-primary shrink-0" />
+                  <span className="text-2xl">🔄</span>
                   <div>
-                    <p className="font-semibold text-lg">Switch Contexts Easily</p>
-                    <p className="text-sm text-muted-foreground mt-1">Analyze same video as founder, marketer, or athlete - instant refresh</p>
-                    <p className="text-xs text-primary font-medium mt-2">⏱️ 5 seconds to refresh</p>
+                    <p className="font-semibold text-lg text-white">Switch Contexts Easily</p>
+                    <p className="text-sm text-white/90 mt-1">Analyze same video as founder, marketer, or athlete - instant refresh</p>
+                    <p className="text-xs text-white font-semibold mt-2 bg-white/10 px-2 py-0.5 rounded-md inline-block">⏱️ 5 seconds to refresh</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <FolderOpen className="h-6 w-6 text-primary shrink-0" />
+                  <span className="text-2xl">📁</span>
                   <div>
-                    <p className="font-semibold text-lg">Organized Library</p>
-                    <p className="text-sm text-muted-foreground mt-1">Auto-saved history with bookmarks and folders</p>
+                    <p className="font-semibold text-lg text-white">Organized Library</p>
+                    <p className="text-sm text-white/90 mt-1">Auto-saved history with bookmarks and folders</p>
                   </div>
                 </div>
               </div>
-              <div className="pt-5 border-t border-primary/20">
+              <div className="pt-5 border-t border-white/20">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-primary" />
-                  <p className="text-lg font-bold text-primary">Total: 2 minutes per video, unlimited perspectives</p>
+                  <span className="text-xl">⏱️</span>
+                  <p className="text-lg font-bold text-white">Total: 2 minutes per video, unlimited perspectives</p>
                 </div>
               </div>
             </CardContent>
