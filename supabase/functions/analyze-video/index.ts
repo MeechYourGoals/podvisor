@@ -98,6 +98,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Comprehensive error wrapper for mobile debugging
   try {
     console.log('[analyze-video] Received request');
     
@@ -976,9 +977,13 @@ ${transcriptSource === 'metadata-only'
     );
 
   } catch (error: any) {
-    console.error('Error in analyze-video:', error);
+    console.error('[analyze-video] CRITICAL ERROR:', error);
     return new Response(
-      JSON.stringify({ error: error?.message || 'Unknown error' }),
+      JSON.stringify({ 
+        error: error?.message || 'Unknown error occurred',
+        error_code: 'UNEXPECTED_ERROR',
+        details: error?.stack || 'No stack trace available'
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

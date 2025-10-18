@@ -136,10 +136,10 @@ export const useAuth = () => {
 
       toast({
         title: "Signed out",
-        description: "You've been successfully signed out.",
+        description: "You've been successfully signed out. Try 3 free analyses!",
       });
 
-      navigate('/auth');
+      navigate('/');
     } catch (error: any) {
       toast({
         title: "Error",

@@ -182,10 +182,27 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
       setIsAdvancedOpen(false);
     } catch (error: any) {
       console.error('Analysis error:', error);
+      
+      // Mobile-friendly error messages with clear guidance
+      let errorMessage = error.message || 'Failed to analyze video';
+      
+      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        errorMessage = '⚠️ Network error. Check your connection and try again.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = '⏱️ Request timed out. Try a shorter video or retry in a moment.';
+      } else if (error.message?.includes('Invalid YouTube URL')) {
+        errorMessage = '🎥 Invalid YouTube link. Make sure it\'s a valid YouTube video URL.';
+      } else if (error.message?.includes('Rate limit')) {
+        errorMessage = '⏸️ Too many requests. Please wait a moment and try again.';
+      } else if (error.message?.includes('Payment')) {
+        errorMessage = '💳 Upgrade required. Sign up for a Pro account to continue.';
+      }
+      
       toast({
-        title: "Error",
-        description: error.message || 'Failed to analyze video',
+        title: "Analysis Failed",
+        description: errorMessage,
         variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setIsAnalyzing(false);
