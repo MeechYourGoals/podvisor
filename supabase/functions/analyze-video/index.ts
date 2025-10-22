@@ -142,7 +142,7 @@ serve(async (req) => {
     const validationResult = analyzeVideoSchema.safeParse(body);
     
     if (!validationResult.success) {
-      console.error('Input validation failed:', validationResult.error.issues);
+      console.error('[analyze-video] Input validation failed:', validationResult.error.issues);
       return new Response(
         JSON.stringify({ 
           error: 'Invalid input parameters',
@@ -157,11 +157,42 @@ serve(async (req) => {
 
     const { videoUrl, profileId, isRefresh, existingVideoId, migrateData, cachedData, isAnonymous, anonymousProfile } = validationResult.data;
     
-    console.log('[analyze-video] Analyzing video:', videoUrl, 'with profile:', profileId, 'isRefresh:', isRefresh, 'migrateData:', migrateData, 'isAnonymous:', isAnonymous, 'anonymousProfile:', anonymousProfile ? 'provided' : 'not provided');
+    console.log('[analyze-video] Request details:', { 
+      videoUrl, 
+      profileId, 
+      isRefresh, 
+      migrateData, 
+      isAnonymous, 
+      hasAnonymousProfile: !!anonymousProfile,
+      anonymousProfileLength: anonymousProfile?.length || 0
+    });
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+
+    // Validate required environment variables
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('[analyze-video] Missing Supabase environment variables');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Server configuration error: Missing Supabase credentials',
+          error_code: 'MISSING_ENV_VARS'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!lovableApiKey) {
+      console.error('[analyze-video] Missing LOVABLE_API_KEY');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Server configuration error: Missing AI API key',
+          error_code: 'MISSING_AI_KEY'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -220,18 +251,18 @@ serve(async (req) => {
     let userProfile = null;
     let profileUsed = 'default';
     
-    if (anonymousProfile) {
+    if (anonymousProfile && anonymousProfile.trim()) {
       // Use anonymous profile provided by user
       userProfile = {
         profile_name: 'Your Profile',
         category: 'general',
-        role_description: anonymousProfile,
+        role_description: anonymousProfile.trim(),
         experience_level: 'varied',
         goals: 'Personalized learning based on context',
         challenges: 'Various'
       };
       profileUsed = 'anonymous';
-      console.log('[analyze-video] Using anonymous profile:', anonymousProfile);
+      console.log('[analyze-video] Using anonymous profile - length:', anonymousProfile.trim().length);
     } else if (profileId) {
       const { data } = await supabase
         .from('user_context_profiles')
@@ -352,6 +383,11 @@ ${transcriptSource === 'metadata-only'
 
     // Call Lovable AI with tool calling (Startup Advisor pattern)
     console.log('[analyze-video] Calling Lovable AI API with tool calling');
+    console.log('[analyze-video] Profile state:', {
+      hasUserProfile: !!userProfile,
+      profileUsed,
+      willGeneratePersonalized: !!userProfile
+    });
     
     // Adaptive model selection based on transcript length
     const model = transcript.length > 12000 ? 'google/gemini-2.5-pro' : 'google/gemini-2.5-flash';
@@ -863,7 +899,7 @@ ${transcriptSource === 'metadata-only'
       if (userProfile && normalizedPersonalized.length > 0) {
         const personalizedToInsert = normalizedPersonalized.map((pInsight: any) => ({
           video_id: video.id,
-          profile_id: profileId,
+          profile_id: profileId || null, // Allow null for anonymous profile descriptions
           for_profile_context: pInsight.for_profile_context,
           insight_text: pInsight.insight_text,
           relevance_score: pInsight.relevance_score,
