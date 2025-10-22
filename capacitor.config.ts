@@ -1,21 +1,47 @@
 import { CapacitorConfig } from '@capacitor/core';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.167f3bd6b2ca46b69ba97cfb4745593b',
-  appName: 'podvisor',
+  appId: 'com.chravel.app',
+  appName: 'Chravel',
   webDir: 'dist',
   server: {
-    url: 'https://167f3bd6-b2ca-46b6-9ba9-7cfb4745593b.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+    // Remove server config for production builds
+    // url should only be set for local development
+    androidScheme: 'https'
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 0
+      launchShowDuration: 2000,
+      launchAutoHide: true,
+      backgroundColor: '#0f172a',
+      androidSplashResourceName: 'splash',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: false,
+      iosSpinnerStyle: 'small',
+      spinnerColor: '#4f46e5'
     },
     StatusBar: {
       style: 'Dark',
-      backgroundColor: '#0f172a'
+      backgroundColor: '#0f172a',
+      overlaysWebView: false
+    },
+    Keyboard: {
+      resize: 'native',
+      style: 'Dark',
+      resizeOnFullScreen: true
     }
+  },
+  ios: {
+    contentInset: 'automatic',
+    scrollEnabled: true,
+    backgroundColor: '#0f172a',
+    limitsNavigationsToAppBoundDomains: true
+  },
+  android: {
+    backgroundColor: '#0f172a',
+    allowMixedContent: false,
+    captureInput: true,
+    webContentsDebuggingEnabled: false
   }
 };
 

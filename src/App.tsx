@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { ProfileProvider } from "./contexts/ProfileContext";
+import { initializePlatform } from "./lib/platform";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -15,15 +16,10 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
-    // Configure iOS status bar
-    if (window.Capacitor?.isNativePlatform()) {
-      import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
-        StatusBar.setStyle({ style: Style.Dark });
-        StatusBar.setBackgroundColor({ color: '#0f172a' });
-      }).catch(() => {
-        // Status bar plugin not available
-      });
-    }
+    // Initialize platform-specific features
+    initializePlatform().catch(error => {
+      console.error('Platform initialization error:', error);
+    });
   }, []);
 
   return (

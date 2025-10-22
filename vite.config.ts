@@ -6,6 +6,8 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
+  const isProduction = mode === 'production';
+  
   return {
     server: {
       host: "::",
@@ -23,6 +25,9 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_SUPABASE_PROJECT_ID': JSON.stringify(env.VITE_SUPABASE_PROJECT_ID ?? 'wnbybsgjdmguzviivpaj'),
     },
     build: {
+      outDir: 'dist',
+      sourcemap: !isProduction,
+      minify: isProduction ? 'esbuild' : false,
       rollupOptions: {
         output: {
           manualChunks: {
@@ -30,10 +35,25 @@ export default defineConfig(({ mode }) => {
             'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
             'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
             'supabase': ['@supabase/supabase-js'],
+            'capacitor': ['@capacitor/core', '@capacitor/app', '@capacitor/haptics'],
           },
         },
       },
       chunkSizeWarningLimit: 600,
+      // Ensure assets are properly handled for native apps
+      assetsInlineLimit: 4096,
+      cssCodeSplit: true,
+    },
+    // Optimize for mobile performance
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        '@supabase/supabase-js',
+        '@capacitor/core',
+      ],
+      exclude: ['@capacitor/cli'],
     },
   };
 });
