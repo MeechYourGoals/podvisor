@@ -1,12 +1,13 @@
 import { Check, X } from 'lucide-react';
 
 const features = [
-  { name: 'Video Analysis', free: '10/month', pro: 'Unlimited', annual: 'Unlimited' },
+  { name: 'YouTube Analysis', free: '10/month', pro: 'Unlimited', annual: 'Unlimited' },
+  { name: 'Audio File Upload', free: '1 trial', pro: 'Unlimited', annual: 'Unlimited' },
   { name: 'Context Profiles', free: '3 profiles', pro: '10 profiles', annual: '10 profiles' },
   { name: 'Personalized Insights', free: true, pro: true, annual: true },
   { name: 'Bookmarks & Folders', free: 'Basic', pro: 'Unlimited', annual: 'Unlimited' },
   { name: 'Export Options', free: 'JSON only', pro: 'JSON, CSV, Markdown', annual: 'JSON, CSV, Markdown' },
-  { name: 'Video Storage', free: 'Last 30 days', pro: 'Unlimited history', annual: 'Unlimited history' },
+  { name: 'Storage History', free: 'Last 30 days', pro: 'Unlimited', annual: 'Unlimited' },
   { name: 'Refresh Insights', free: false, pro: true, annual: true },
 ];
 

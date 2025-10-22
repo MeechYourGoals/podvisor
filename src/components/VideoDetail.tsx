@@ -447,9 +447,14 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                   )}
 
                   {/* Source */}
-                  {video.content_sources && (
+                  {!((video as any).is_audio_upload) && video.content_sources && (
                     <SheetDescription className="text-left text-sm">
                       Source: {video.content_sources.source_name}
+                    </SheetDescription>
+                  )}
+                  {(video as any).is_audio_upload && (video as any).audio_original_filename && (
+                    <SheetDescription className="text-left text-sm">
+                      Audio File: {(video as any).audio_original_filename}
                     </SheetDescription>
                   )}
                 </div>
@@ -500,9 +505,10 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                     size="sm"
                     variant="outline"
                     onClick={() => window.open(video.youtube_url, '_blank')}
+                    disabled={(video as any).is_audio_upload}
                   >
                     <Youtube className="h-4 w-4 mr-1" />
-                    Watch
+                    {(video as any).is_audio_upload ? 'Audio' : 'Watch'}
                   </Button>
                   <Button size="sm" variant="outline" onClick={handleBookmarkVideo}>
                     <Bookmark className="h-4 w-4" />

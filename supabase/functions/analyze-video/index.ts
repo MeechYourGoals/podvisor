@@ -109,7 +109,14 @@ serve(async (req) => {
         .regex(/^https:\/\/(?:(?:www|m)\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?$/, {
           message: 'Only YouTube video URLs are supported'
         })
-        .max(500, 'URL too long'),
+        .max(500, 'URL too long')
+        .optional(),
+      audioUpload: z.object({
+        filename: z.string().max(255),
+        storagePath: z.string().max(500).optional(),
+        audioBase64: z.string().optional(),
+        durationSeconds: z.number().optional(),
+      }).optional(),
       profileId: z.string().uuid().optional().nullable(),
       isRefresh: z.boolean().optional(),
       existingVideoId: z.string().uuid().optional().nullable(),
@@ -127,6 +134,8 @@ serve(async (req) => {
           thumbnail_url: z.string().url().optional(),
         }).optional(),
       }).optional(),
+    }).refine(data => data.videoUrl || data.audioUpload, {
+      message: 'Either videoUrl or audioUpload must be provided'
     });
 
     let body;
@@ -155,10 +164,11 @@ serve(async (req) => {
       );
     }
 
-    const { videoUrl, profileId, isRefresh, existingVideoId, migrateData, cachedData, isAnonymous, anonymousProfile } = validationResult.data;
+    const { videoUrl, audioUpload, profileId, isRefresh, existingVideoId, migrateData, cachedData, isAnonymous, anonymousProfile } = validationResult.data;
     
     console.log('[analyze-video] Request details:', { 
       videoUrl, 
+      audioUpload: audioUpload ? { filename: audioUpload.filename, hasStorage: !!audioUpload.storagePath } : null,
       profileId, 
       isRefresh, 
       migrateData, 
@@ -196,55 +206,241 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Extract YouTube video ID
-    const videoId = extractYouTubeId(videoUrl);
-    if (!videoId) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid YouTube URL' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Get video metadata from YouTube oEmbed
-    console.log('[analyze-video] Fetching oEmbed metadata');
-    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-    const oembedResponse = await fetch(oembedUrl);
-    const oembedData = await oembedResponse.json();
-    
-    const videoTitle = oembedData.title;
-    const channelName = oembedData.author_name;
-
-    console.log('[analyze-video] Video metadata:', { videoTitle, channelName });
-
-    // Fetch video transcript with fallback
-    console.log('[analyze-video] Fetching transcript');
     let transcript = '';
     let transcriptSource = 'none';
-    
-    // Tier 1: Try youtube-transcript library
-    try {
-      const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
-      transcript = transcriptData.map((item: any) => item.text).join(' ');
-      transcriptSource = 'youtube-transcript';
-      console.log('[analyze-video] Transcript fetched via youtube-transcript, length:', transcript.length);
-    } catch (transcriptError) {
-      console.log('[analyze-video] Tier 1 (youtube-transcript) failed, trying Tier 2');
+    let videoMetadata: any = {};
+    let videoId = '';
+
+    // Handle audio upload vs YouTube video
+    if (audioUpload) {
+      console.log('[analyze-video] Processing audio upload:', audioUpload.filename);
       
-      // Tier 2: Try timedtext API
-      try {
-        transcript = await fetchTimedTextTranscript(videoId);
-        transcriptSource = 'timedtext';
-      } catch (timedtextError) {
-        console.log('[analyze-video] Tier 2 (timedtext) failed, using metadata-only analysis');
+      // Check subscription tier for authenticated users (Pro/Annual only)
+      if (!isAnonymous) {
+        const authHeader = req.headers.get('authorization')?.replace('Bearer ', '');
+        const { data: { user } } = await supabase.auth.getUser(authHeader || '');
         
-        // Tier 3: Metadata-only analysis (Perplexity removed for reliability)
-        console.log('[analyze-video] Using metadata-only analysis');
-        transcript = `Video Title: ${videoTitle}\nChannel: ${channelName}\nURL: ${videoUrl}\n\nNote: No transcript available. This is a metadata-only analysis.`;
-        transcriptSource = 'metadata-only';
+        if (user) {
+          const { data: subscription } = await supabase
+            .from('user_subscriptions')
+            .select('tier')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (subscription?.tier !== 'pro' && subscription?.tier !== 'annual') {
+            console.log('[analyze-video] Non-Pro user attempted audio upload');
+            return new Response(
+              JSON.stringify({ 
+                error: 'Audio upload requires Pro subscription',
+                error_code: 'UPGRADE_REQUIRED' 
+              }),
+              { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
       }
+      
+      // Fetch audio file (either from storage or base64)
+      let audioData: Uint8Array;
+      
+      if (audioUpload.storagePath && !isAnonymous) {
+        // Authenticated user - fetch from storage
+        const { data: audioFile, error: storageError } = await supabase.storage
+          .from('audio-uploads')
+          .download(audioUpload.storagePath);
+        
+        if (storageError) {
+          console.error('[analyze-video] Storage fetch error:', storageError);
+          throw new Error('Failed to fetch audio file from storage');
+        }
+        
+        audioData = new Uint8Array(await audioFile.arrayBuffer());
+      } else if (audioUpload.audioBase64) {
+        // Anonymous user - decode base64
+        const binaryString = atob(audioUpload.audioBase64);
+        audioData = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          audioData[i] = binaryString.charCodeAt(i);
+        }
+      } else {
+        throw new Error('No audio data provided (storagePath or audioBase64 required)');
+      }
+      
+      // Convert audio to base64 for Gemini API
+      const audioBase64 = btoa(String.fromCharCode(...audioData));
+      
+      // Determine MIME type from filename
+      const extension = audioUpload.filename.split('.').pop()?.toLowerCase();
+      const mimeTypeMap: Record<string, string> = {
+        'mp3': 'audio/mpeg',
+        'm4a': 'audio/mp4',
+        'wav': 'audio/wav',
+        'webm': 'audio/webm',
+        'ogg': 'audio/ogg',
+        'flac': 'audio/flac',
+        'aac': 'audio/aac',
+      };
+      const mimeType = mimeTypeMap[extension || 'mp3'] || 'audio/mpeg';
+      
+      console.log('[analyze-video] Audio prepared:', {
+        filename: audioUpload.filename,
+        mimeType,
+        sizeKB: Math.round(audioData.length / 1024)
+      });
+      
+      // Call Gemini to transcribe AND extract metadata in one shot
+      const transcriptionPrompt = `You are analyzing an audio file. Please:
+1. Provide a complete transcript of the audio
+2. Extract metadata: title (if mentioned or infer from content), speaker names, key topics/tags
+3. Provide a brief summary
+
+Return structured data.`;
+
+      const transcriptionResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: transcriptionPrompt },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${mimeType};base64,${audioBase64}`
+                  }
+                }
+              ]
+            }
+          ],
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name: 'extract_audio_metadata',
+                description: 'Extract transcript and metadata from audio',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    transcript: { type: 'string', description: 'Full transcript of audio' },
+                    title: { type: 'string', description: 'Title or main topic of audio' },
+                    speakers: { 
+                      type: 'array', 
+                      items: { type: 'string' },
+                      description: 'Names of speakers if identified'
+                    },
+                    tags: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      description: 'Key topics or tags (3-5 items)'
+                    },
+                    summary: { type: 'string', description: 'Brief summary of content' }
+                  },
+                  required: ['transcript', 'title', 'tags', 'summary'],
+                  additionalProperties: false
+                }
+              }
+            }
+          ],
+          tool_choice: { type: 'function', function: { name: 'extract_audio_metadata' } }
+        }),
+      });
+
+      if (!transcriptionResponse.ok) {
+        const errorText = await transcriptionResponse.text();
+        console.error('[analyze-video] Gemini transcription error:', errorText);
+        throw new Error('Transcription failed');
+      }
+
+      const transcriptionResult = await transcriptionResponse.json();
+      const toolCall = transcriptionResult.choices?.[0]?.message?.tool_calls?.[0];
+      
+      if (!toolCall) {
+        throw new Error('No transcription data returned from Gemini');
+      }
+
+      const audioMetadata = JSON.parse(toolCall.function.arguments);
+      transcript = audioMetadata.transcript;
+      transcriptSource = 'gemini-audio';
+      
+      videoMetadata = {
+        title: audioMetadata.title || audioUpload.filename.replace(/\.[^/.]+$/, ''),
+        video_id: crypto.randomUUID(),
+        thumbnail_url: null,
+        speakers: (audioMetadata.speakers || []).map((name: string) => ({ name, role: 'speaker' })),
+        tags: audioMetadata.tags || ['audio-upload'],
+        description: audioMetadata.summary || '',
+      };
+      
+      videoId = videoMetadata.video_id;
+      
+      console.log('[analyze-video] Audio transcribed:', {
+        transcriptLength: transcript.length,
+        title: videoMetadata.title,
+        speakers: videoMetadata.speakers.length
+      });
+      
+    } else if (videoUrl) {
+      // Extract YouTube video ID
+      videoId = extractYouTubeId(videoUrl);
+      if (!videoId) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid YouTube URL' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get video metadata from YouTube oEmbed
+      console.log('[analyze-video] Fetching oEmbed metadata');
+      const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+      const oembedResponse = await fetch(oembedUrl);
+      const oembedData = await oembedResponse.json();
+      
+      const videoTitle = oembedData.title;
+      const channelName = oembedData.author_name;
+
+      console.log('[analyze-video] Video metadata:', { videoTitle, channelName });
+
+      // Fetch video transcript with fallback
+      console.log('[analyze-video] Fetching transcript');
+      
+      // Tier 1: Try youtube-transcript library
+      try {
+        const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
+        transcript = transcriptData.map((item: any) => item.text).join(' ');
+        transcriptSource = 'youtube-transcript';
+        console.log('[analyze-video] Transcript fetched via youtube-transcript, length:', transcript.length);
+      } catch (transcriptError) {
+        console.log('[analyze-video] Tier 1 (youtube-transcript) failed, trying Tier 2');
+        
+        // Tier 2: Try timedtext API
+        try {
+          transcript = await fetchTimedTextTranscript(videoId);
+          transcriptSource = 'timedtext';
+        } catch (timedtextError) {
+          console.log('[analyze-video] Tier 2 (timedtext) failed, using metadata-only analysis');
+          
+          // Tier 3: Metadata-only analysis
+          console.log('[analyze-video] Using metadata-only analysis');
+          transcript = `Video Title: ${videoTitle}\nChannel: ${channelName}\nURL: ${videoUrl}\n\nNote: No transcript available. This is a metadata-only analysis.`;
+          transcriptSource = 'metadata-only';
+        }
+      }
+      
+      console.log(`[analyze-video] Transcript source: ${transcriptSource}, length: ${transcript.length}`);
+      
+      videoMetadata = {
+        title: videoTitle,
+        video_id: videoId,
+        thumbnail_url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+      };
     }
-    
-    console.log(`[analyze-video] Transcript source: ${transcriptSource}, length: ${transcript.length}`);
+
 
     // Get user profile if provided, otherwise get default profile
     console.log('[analyze-video] Resolving user profile');

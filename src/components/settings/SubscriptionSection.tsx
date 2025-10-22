@@ -139,7 +139,8 @@ export const SubscriptionSection = () => {
             <div className="flex-1 space-y-2">
               <h4 className="font-semibold text-sm">Upgrade to Pro</h4>
               <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• Unlimited video analyses</li>
+                <li>• Unlimited YouTube analyses</li>
+                <li>• Unlimited audio file uploads</li>
                 <li>• Up to 10 context profiles</li>
                 <li>• Priority support</li>
                 <li>• Advanced insights</li>

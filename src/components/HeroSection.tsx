@@ -14,17 +14,17 @@ const HeroSection = () => {
           </p>
         </div>
         <p className="text-2xl md:text-3xl font-semibold tracking-wide">
-          Your AI YouTube Advisor
+          Your AI YouTube & Audio Advisor
         </p>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-          Extract personalized insights from expert videos in minutes. No signup required to start.
+          Extract personalized insights from expert videos and audio files in minutes. No signup required to start.
         </p>
         <div className="flex items-center justify-center gap-3">
           <Badge variant="secondary" className="text-sm px-4 py-2 glass-card hover:glow-primary transition-all duration-300">
-            3 free analyses
+            3 free YouTube analyses
           </Badge>
           <Badge variant="outline" className="text-sm px-4 py-2 glass-card hover:glow-primary transition-all duration-300">
-            No credit card
+            1 free audio upload
           </Badge>
         </div>
       </div>

@@ -17,6 +17,7 @@ import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AnonymousVideoStorage } from '@/lib/anonymousVideoStorage';
+import { AudioUploadForm } from '@/components/AudioUploadForm';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -127,6 +128,17 @@ const Index = () => {
           setSelectedVideoId(videoId);
           setVideoDetailOpen(true);
         }} />
+        
+        {/* Audio Upload Form */}
+        <AudioUploadForm 
+          onAnalysisComplete={(audioId) => {
+            setRefreshTrigger(prev => prev + 1);
+            setSelectedVideoId(audioId);
+            setVideoDetailOpen(true);
+          }}
+          subscription={subscription}
+        />
+        
         <VideosTable
           onVideoSelect={handleVideoSelect}
           onBookmark={handleBookmarkVideo}

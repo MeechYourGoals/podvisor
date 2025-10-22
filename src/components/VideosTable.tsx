@@ -105,6 +105,8 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger, isAnonymous = 
           is_favorite,
           tags,
           speakers,
+          is_audio_upload,
+          audio_original_filename,
           content_sources (
             source_name
           )
@@ -385,11 +387,14 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger, isAnonymous = 
                 <div className="flex-1 min-w-0 space-y-2 w-full">
                   {/* Title & Date */}
                   <div>
-                    <h3 
+                     <h3 
                       className="font-medium text-base line-clamp-1 cursor-pointer hover:text-primary transition-colors"
                       onClick={() => onVideoSelect(video.id)}
                     >
                       {video.title}
+                      {(video as any).is_audio_upload && (
+                        <Badge variant="outline" className="ml-2 text-xs">🎵 Audio</Badge>
+                      )}
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       {formatDistanceToNow(new Date(video.analyzed_at), { addSuffix: true })}

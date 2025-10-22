@@ -17,7 +17,8 @@ const plans = [
     headline: 'Perfect for trying Podvisor',
     icon: Zap,
     features: [
-      '3 instant analyses (no signup)',
+      '3 instant YouTube analyses (no signup)',
+      '1 free audio upload trial',
       '10 analyses/month after signup',
       '3 context profiles',
       'Basic bookmarks',
@@ -36,7 +37,8 @@ const plans = [
     headline: 'For serious learners and professionals',
     icon: Crown,
     features: [
-      'Unlimited video analyses',
+      'Unlimited YouTube analyses',
+      'Unlimited audio file uploads',
       'Up to 10 context profiles',
       'Advanced bookmarks & folders',
       'Unlimited history',

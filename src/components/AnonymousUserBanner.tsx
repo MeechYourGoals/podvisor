@@ -2,14 +2,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { AnonymousVideoStorage } from '@/lib/anonymousVideoStorage';
+import { AnonymousAudioStorage } from '@/lib/anonymousAudioStorage';
 import { Sparkles, Crown } from 'lucide-react';
 
 export const AnonymousUserBanner = () => {
   const navigate = useNavigate();
-  const count = AnonymousVideoStorage.count();
-  const remaining = AnonymousVideoStorage.getRemaining();
+  const videoCount = AnonymousVideoStorage.count();
+  const videoRemaining = AnonymousVideoStorage.getRemaining();
+  const audioCount = AnonymousAudioStorage.count();
+  const audioRemaining = AnonymousAudioStorage.getRemaining();
 
-  if (count === 0) return null;
+  if (videoCount === 0 && audioCount === 0) return null;
 
   return (
     <Card className="border-2 border-primary/50 bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 mb-6">
@@ -19,13 +22,13 @@ export const AnonymousUserBanner = () => {
             <Sparkles className="h-6 w-6 text-primary shrink-0 mt-1" />
             <div>
               <p className="font-semibold text-lg mb-1">
-                {remaining > 0 
-                  ? `Try ${remaining} more free ${remaining === 1 ? 'analysis' : 'analyses'}`
-                  : `You've used all 3 free analyses`
+                {videoRemaining > 0 || audioRemaining > 0
+                  ? `Try ${videoRemaining} more YouTube ${videoRemaining === 1 ? 'analysis' : 'analyses'} and ${audioRemaining} audio upload`
+                  : `You've used all free trials`
                 }
               </p>
               <p className="text-sm text-muted-foreground">
-                Sign up to save your work, create custom profiles, and unlock 10 analyses/month (free tier)
+                Sign up to save your work, create custom profiles, and unlock 10 YouTube analyses/month (free tier)
               </p>
             </div>
           </div>
