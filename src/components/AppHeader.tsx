@@ -13,7 +13,7 @@ export const AppHeader = () => {
       <div className="container flex h-12 items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="text-2xl font-display font-bold text-foreground">
-            Podvisor
+            Chravel
           </div>
         </div>
         
