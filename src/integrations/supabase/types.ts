@@ -510,9 +510,13 @@ export type Database = {
       videos: {
         Row: {
           analyzed_at: string | null
+          audio_duration_seconds: number | null
+          audio_original_filename: string | null
+          audio_source_path: string | null
           created_at: string | null
           expert_id: string | null
           id: string
+          is_audio_upload: boolean | null
           is_favorite: boolean | null
           profile_used: string | null
           source_id: string | null
@@ -528,9 +532,13 @@ export type Database = {
         }
         Insert: {
           analyzed_at?: string | null
+          audio_duration_seconds?: number | null
+          audio_original_filename?: string | null
+          audio_source_path?: string | null
           created_at?: string | null
           expert_id?: string | null
           id?: string
+          is_audio_upload?: boolean | null
           is_favorite?: boolean | null
           profile_used?: string | null
           source_id?: string | null
@@ -546,9 +554,13 @@ export type Database = {
         }
         Update: {
           analyzed_at?: string | null
+          audio_duration_seconds?: number | null
+          audio_original_filename?: string | null
+          audio_source_path?: string | null
           created_at?: string | null
           expert_id?: string | null
           id?: string
+          is_audio_upload?: boolean | null
           is_favorite?: boolean | null
           profile_used?: string | null
           source_id?: string | null
@@ -584,14 +596,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      cleanup_anonymous_limits: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      increment_video_count: {
-        Args: { p_user_id: string }
-        Returns: undefined
-      }
+      cleanup_anonymous_limits: { Args: never; Returns: undefined }
+      increment_video_count: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
       profile_category:
