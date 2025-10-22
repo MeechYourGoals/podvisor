@@ -5,10 +5,18 @@ const HeroSection = () => {
     <div className="relative py-12 mb-8 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-mesh opacity-50 blur-3xl"></div>
       <div className="relative max-w-4xl mx-auto text-center space-y-6">
-        <h1 className="text-6xl md:text-7xl font-display font-bold tracking-tight">
-          Your AI Advisor from YouTube
-        </h1>
-        <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto tracking-wide">
+        <div className="space-y-2">
+          <h1 className="text-7xl md:text-8xl font-display font-bold tracking-tight bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+            YAYA
+          </h1>
+          <p className="text-lg md:text-xl text-muted-foreground/80">
+            by Podvisor
+          </p>
+        </div>
+        <p className="text-2xl md:text-3xl font-semibold tracking-wide">
+          Your AI YouTube Advisor
+        </p>
+        <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
           Extract personalized insights from expert videos in minutes. No signup required to start.
         </p>
         <div className="flex items-center justify-center gap-3">

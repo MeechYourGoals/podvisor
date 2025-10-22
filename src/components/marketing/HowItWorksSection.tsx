@@ -23,7 +23,7 @@ export const HowItWorksSection = () => {
     <section className="py-12">
       <div className="max-w-5xl mx-auto">
         <div className="text-center space-y-3 mb-12">
-          <h2 className="text-3xl font-display font-bold">How It Works</h2>
+          <h2 className="text-3xl font-display font-bold">How YAYA Works</h2>
           <p className="text-muted-foreground">
             Turn hours of video content into actionable insights in minutes
           </p>

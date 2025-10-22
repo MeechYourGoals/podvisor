@@ -12,8 +12,9 @@ export const AppHeader = () => {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-safe">
       <div className="container flex h-12 items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="text-2xl font-display font-bold text-foreground">
-            Chravel
+          <div className="flex flex-col leading-none">
+            <span className="text-2xl font-display font-bold text-foreground">YAYA</span>
+            <span className="text-[10px] text-muted-foreground">by Podvisor</span>
           </div>
         </div>
         

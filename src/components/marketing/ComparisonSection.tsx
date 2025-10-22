@@ -9,10 +9,10 @@ export const ComparisonSection = () => {
       
       <div className="relative text-center space-y-4 max-w-3xl mx-auto">
         <h2 className="text-5xl font-bold font-display">
-          Why Podvisor vs. Manual AI Workflows?
+          Why YAYA vs. Manual AI Workflows?
         </h2>
         <p className="text-xl text-muted-foreground leading-relaxed">
-          ChatGPT and NotebookLM are amazing — but for extracting insights from videos, here's why Podvisor is 10x faster and more comprehensive
+          ChatGPT and NotebookLM are amazing — but for extracting insights from videos, here's why YAYA is 10x faster and more comprehensive
         </p>
       </div>
 
