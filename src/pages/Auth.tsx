@@ -113,12 +113,12 @@ const Auth = () => {
           <div className="flex items-center justify-center gap-2 mb-2">
             <Sparkles className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Podvisor
+              Chravel
             </h1>
           </div>
           <CardTitle>Welcome</CardTitle>
           <CardDescription>
-            Your AI advisor from YouTube
+            AI-native travel & event management
           </CardDescription>
         </CardHeader>
         <CardContent>
