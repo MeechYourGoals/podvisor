@@ -87,29 +87,32 @@ serve(async (req) => {
           break
         }
 
-        // Determine tier from subscription items
-      const tierMap: Record<string, string> = {
-        // TODO: Replace these with your actual Stripe price IDs from dashboard
-        // Example format:
-        // 'price_1ABC123': 'pro',
-        // 'price_1XYZ789': 'team',
-      }
+        // Get Stripe price IDs from environment variables
+        // Set these in your Supabase Edge Function secrets:
+        // STRIPE_PRO_PRICE_ID and STRIPE_TEAM_PRICE_ID
+        const proPriceId = Deno.env.get('STRIPE_PRO_PRICE_ID');
+        const teamPriceId = Deno.env.get('STRIPE_TEAM_PRICE_ID');
 
-      const priceId = subscription.items.data[0]?.price.id;
-      
-      // Critical: Don't default to 'free' - this would downgrade paying customers
-      if (!priceId || !tierMap[priceId]) {
-        console.error('Unknown price ID received:', priceId, 'Available mappings:', Object.keys(tierMap));
-        return new Response(
-          JSON.stringify({ 
-            error: 'Unknown subscription tier - price ID not configured in tierMap',
-            priceId: priceId 
-          }),
-          { status: 400, headers: corsHeaders }
-        );
-      }
-      
-      const tier = tierMap[priceId];
+        const tierMap: Record<string, string> = {};
+        if (proPriceId) tierMap[proPriceId] = 'pro';
+        if (teamPriceId) tierMap[teamPriceId] = 'team';
+
+        const priceId = subscription.items.data[0]?.price.id;
+
+        // Critical: Don't default to 'free' - this would downgrade paying customers
+        if (!priceId || !tierMap[priceId]) {
+          console.error('Unknown price ID received:', priceId, 'Available mappings:', Object.keys(tierMap));
+          console.error('Configure STRIPE_PRO_PRICE_ID and STRIPE_TEAM_PRICE_ID in Supabase secrets');
+          return new Response(
+            JSON.stringify({
+              error: 'Unknown subscription tier - price ID not configured. Please contact support.',
+              priceId: priceId
+            }),
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
+        const tier = tierMap[priceId];
 
         await supabaseAdmin
           .from('user_subscriptions')
@@ -159,7 +162,8 @@ serve(async (req) => {
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
         console.log('Payment failed for customer:', invoice.customer)
-        // TODO: Send notification email
+        // Future: Implement email notification system for failed payments
+        // Could use Supabase Edge Functions to send transactional emails
         break
       }
 

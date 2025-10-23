@@ -31,18 +31,18 @@ export const WelcomeDialog = () => {
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-6 w-6 text-primary" />
-            <DialogTitle>Welcome to Chravel!</DialogTitle>
+            <DialogTitle>Welcome to YAYA!</DialogTitle>
           </div>
           <DialogDescription className="space-y-3 pt-2">
             <p>
-              Your AI-native platform for collaborative travel planning, logistics coordination, and event management.
+              Your AI-powered video analysis platform. Extract personalized insights from any YouTube video.
             </p>
             <div className="space-y-2 text-sm">
               <p className="font-semibold text-foreground">Get started in 3 steps:</p>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                <li>Create a trip or event</li>
-                <li>Invite your team or group</li>
-                <li>Collaborate in real-time with AI assistance</li>
+                <li>Paste any YouTube URL</li>
+                <li>Create a profile to personalize insights</li>
+                <li>Get AI-powered analysis tailored to your goals</li>
               </ol>
             </div>
           </DialogDescription>
