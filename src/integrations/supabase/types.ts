@@ -467,8 +467,11 @@ export type Database = {
       }
       user_subscriptions: {
         Row: {
+          audio_per_month: number | null
+          audio_uploads_this_month: number | null
           created_at: string | null
           current_period_end: string | null
+          folders_per_profile: number | null
           id: string
           profile_limit: number | null
           stripe_customer_id: string | null
@@ -480,8 +483,11 @@ export type Database = {
           videos_per_month: number | null
         }
         Insert: {
+          audio_per_month?: number | null
+          audio_uploads_this_month?: number | null
           created_at?: string | null
           current_period_end?: string | null
+          folders_per_profile?: number | null
           id?: string
           profile_limit?: number | null
           stripe_customer_id?: string | null
@@ -493,8 +499,11 @@ export type Database = {
           videos_per_month?: number | null
         }
         Update: {
+          audio_per_month?: number | null
+          audio_uploads_this_month?: number | null
           created_at?: string | null
           current_period_end?: string | null
+          folders_per_profile?: number | null
           id?: string
           profile_limit?: number | null
           stripe_customer_id?: string | null
@@ -597,6 +606,7 @@ export type Database = {
     }
     Functions: {
       cleanup_anonymous_limits: { Args: never; Returns: undefined }
+      increment_audio_count: { Args: { p_user_id: string }; Returns: undefined }
       increment_video_count: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {

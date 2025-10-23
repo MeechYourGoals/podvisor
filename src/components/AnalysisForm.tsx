@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -35,6 +35,7 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [isPersonalizedOpen, setIsPersonalizedOpen] = useState(false);
   const [limitModalOpen, setLimitModalOpen] = useState(false);
+  const [subscription, setSubscription] = useState<any>(null);
   const [anonymousProfile, setAnonymousProfile] = useState(() => {
     // Load from sessionStorage if exists
     return AnonymousVideoStorage.getAnonymousProfile() || '';
@@ -48,6 +49,21 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
   const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<VideoFormData>({
     resolver: zodResolver(videoSchema),
   });
+
+  useEffect(() => {
+    if (user) {
+      loadSubscription();
+    }
+  }, [user]);
+
+  const loadSubscription = async () => {
+    const { data } = await supabase
+      .from('user_subscriptions')
+      .select('*')
+      .eq('user_id', user?.id)
+      .single();
+    setSubscription(data);
+  };
 
   const useSampleLink = () => {
     setValue('videoUrl', 'https://www.youtube.com/watch?v=xguam0TKMw8');
@@ -229,12 +245,17 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
               </Badge>
             )}
           </div>
+          {!isAnonymous && subscription && subscription.tier === 'free' && (
+            <Badge variant="secondary" className="text-xs">
+              {subscription.videos_analyzed_this_month}/{subscription.videos_per_month} used
+            </Badge>
+          )}
         </CardHeader>
         <CardContent>
           {isAnonymous && anonymousCount > 0 && (
             <div className="mb-4 p-3 bg-muted/50 border rounded-lg">
               <p className="text-sm">
-                <strong>Free trial active:</strong> Sign up to save analyses and unlock 10/month
+                <strong>Free trial active:</strong> Sign up to save analyses and unlock 4/month
               </p>
             </div>
           )}

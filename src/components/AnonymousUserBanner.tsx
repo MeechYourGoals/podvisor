@@ -28,7 +28,7 @@ export const AnonymousUserBanner = () => {
                 }
               </p>
               <p className="text-sm text-muted-foreground">
-                Sign up to save your work, create custom profiles, and unlock 10 YouTube analyses/month (free tier)
+                Sign up to unlock 4 YouTube analyses & 2 audio uploads/month, plus 2 custom profiles (free tier)
               </p>
             </div>
           </div>

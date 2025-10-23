@@ -13,7 +13,12 @@ import { useProfileContext } from '@/contexts/ProfileContext';
 
 interface AudioUploadFormProps {
   onAnalysisComplete: (audioId: string, isAnonymous: boolean) => void;
-  subscription?: { tier: string } | null;
+  subscription?: { 
+    tier: string;
+    audio_uploads_this_month?: number;
+    audio_per_month?: number;
+    folders_per_profile?: number;
+  } | null;
 }
 
 export const AudioUploadForm = ({ onAnalysisComplete, subscription }: AudioUploadFormProps) => {
@@ -27,7 +32,10 @@ export const AudioUploadForm = ({ onAnalysisComplete, subscription }: AudioUploa
   const isAnonymous = !user;
   const isPro = subscription?.tier === 'pro' || subscription?.tier === 'annual';
   const anonymousAudioCount = isAnonymous ? AnonymousAudioStorage.count() : 0;
-  const canUpload = isAnonymous ? AnonymousAudioStorage.canAddMore() : isPro;
+  const isFree = subscription?.tier === 'free';
+  const audioUsed = subscription?.audio_uploads_this_month || 0;
+  const audioLimit = subscription?.audio_per_month || 2;
+  const canUpload = isAnonymous ? AnonymousAudioStorage.canAddMore() : (isPro || (isFree && audioUsed < audioLimit));
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,7 +73,13 @@ export const AudioUploadForm = ({ onAnalysisComplete, subscription }: AudioUploa
       if (isAnonymous) {
         toast({
           title: 'Free trial used',
-          description: 'Sign up for Pro to upload more audio files',
+          description: 'Sign up to get 2 audio uploads/month',
+          variant: 'destructive',
+        });
+      } else if (isFree) {
+        toast({
+          title: 'Monthly limit reached',
+          description: `Free tier: ${audioLimit} audio uploads/month. Upgrade to Pro for unlimited!`,
           variant: 'destructive',
         });
       } else {
@@ -174,10 +188,14 @@ export const AudioUploadForm = ({ onAnalysisComplete, subscription }: AudioUploa
               <div className="text-base font-normal text-muted-foreground">Your Audio, Your Advice</div>
             </CardTitle>
             <CardDescription className="text-center">
-              {isPro || isAnonymous
+              {isPro
                 ? 'Upload podcasts, meetings, lectures - any audio content'
-                : 'Upgrade to Pro to analyze audio files'}
-              {!isAnonymous && !isPro && (
+                : isAnonymous
+                  ? 'Upload podcasts, meetings, lectures - any audio content'
+                  : isFree
+                    ? `${audioUsed}/${audioLimit} uploads used this month`
+                    : 'Upgrade to Pro to analyze audio files'}
+              {!isAnonymous && !isPro && !isFree && (
                 <Badge variant="secondary" className="ml-2">
                   <Crown className="h-3 w-3 mr-1" />
                   Pro
@@ -188,6 +206,11 @@ export const AudioUploadForm = ({ onAnalysisComplete, subscription }: AudioUploa
           {isAnonymous && (
             <Badge variant="secondary" className="text-xs absolute top-6 right-6">
               {anonymousAudioCount}/1 free
+            </Badge>
+          )}
+          {!isAnonymous && isFree && (
+            <Badge variant="secondary" className="text-xs absolute top-6 right-6">
+              {audioUsed}/{audioLimit} used
             </Badge>
           )}
         </div>

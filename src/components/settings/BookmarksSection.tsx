@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfileContext } from '@/contexts/ProfileContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Folder, Plus, Trash2, Youtube, FileText, Download } from 'lucide-react';
+import { Folder, Plus, Trash2, Youtube, FileText, Download, Globe, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -21,6 +22,7 @@ interface BookmarkFolder {
   color: string;
   icon: string | null;
   sort_order: number;
+  profile_id: string | null;
 }
 
 interface BookmarkedVideo {
@@ -60,7 +62,10 @@ export const BookmarksSection = () => {
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderDesc, setNewFolderDesc] = useState('');
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'global' | 'profile'>('global');
+  const [subscription, setSubscription] = useState<any>(null);
   const { user } = useAuth();
+  const { activeProfileId } = useProfileContext();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -70,13 +75,35 @@ export const BookmarksSection = () => {
     } else {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, viewMode, activeProfileId]);
 
   const loadData = async () => {
     setLoading(true);
     try {
+      // Load subscription data
+      const { data: subData } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+      setSubscription(subData);
+
+      // Build folder query with profile filtering
+      let folderQuery = (supabase as any)
+        .from('bookmark_folders')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('sort_order');
+      
+      // Filter folders based on view mode
+      if (viewMode === 'profile' && activeProfileId) {
+        folderQuery = folderQuery.eq('profile_id', activeProfileId);
+      } else if (viewMode === 'global') {
+        folderQuery = folderQuery.is('profile_id', null);
+      }
+
       const [foldersRes, videosRes, insightsRes] = await Promise.all([
-        (supabase as any).from('bookmark_folders').select('*').eq('user_id', user?.id).order('sort_order'),
+        folderQuery,
         (supabase as any).from('bookmarked_videos').select(`
           id,
           video_id,
@@ -119,6 +146,25 @@ export const BookmarksSection = () => {
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
 
+    // Check folder limit for free users
+    if (subscription?.tier === 'free') {
+      const foldersPerProfile = subscription.folders_per_profile || 2;
+      const currentFolders = folders.filter(f => 
+        viewMode === 'profile' 
+          ? f.profile_id === activeProfileId 
+          : f.profile_id === null
+      ).length;
+      
+      if (currentFolders >= foldersPerProfile) {
+        toast({
+          title: "Folder limit reached",
+          description: `Free tier: ${foldersPerProfile} folders per ${viewMode === 'profile' ? 'profile' : 'global'}. Upgrade to Pro for unlimited folders!`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     try {
       const { error } = await (supabase as any)
         .from('bookmark_folders')
@@ -126,6 +172,7 @@ export const BookmarksSection = () => {
           user_id: user?.id,
           folder_name: newFolderName,
           description: newFolderDesc || null,
+          profile_id: viewMode === 'profile' ? activeProfileId : null,
           color: '#6366f1',
           sort_order: folders.length,
         });
@@ -290,6 +337,44 @@ ${i.notes ? `\n**Notes**: ${i.notes}` : ''}
           Your bookmarked videos and insights
         </p>
       </div>
+
+      {/* View Mode Switcher */}
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'global' | 'profile')} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="global">
+            <Globe className="h-4 w-4 mr-2" />
+            Global Folders
+          </TabsTrigger>
+          <TabsTrigger value="profile" disabled={!activeProfileId}>
+            <User className="h-4 w-4 mr-2" />
+            Profile Folders
+            {activeProfileId && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {folders.filter(f => f.profile_id === activeProfileId).length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Explanation text */}
+      {viewMode === 'global' && (
+        <p className="text-xs text-muted-foreground">
+          Global folders are visible across all profiles
+        </p>
+      )}
+      {viewMode === 'profile' && activeProfileId && (
+        <p className="text-xs text-muted-foreground">
+          These folders are specific to your active profile
+        </p>
+      )}
+      {viewMode === 'profile' && !activeProfileId && (
+        <div className="text-center py-8">
+          <p className="text-sm text-muted-foreground">
+            Select a profile to manage profile-specific folders
+          </p>
+        </div>
+      )}
 
       <Tabs defaultValue="folders" className="w-full">
         <TabsList className="grid w-full grid-cols-3">

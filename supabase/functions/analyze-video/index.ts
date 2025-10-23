@@ -217,7 +217,7 @@ serve(async (req) => {
     if (audioUpload) {
       console.log('[analyze-video] Processing audio upload:', audioUpload.filename);
       
-      // Check subscription tier for authenticated users (Pro/Annual only)
+      // Check subscription tier and audio limits for authenticated users
       if (!isAnonymous) {
         const authHeader = req.headers.get('authorization')?.replace('Bearer ', '');
         const { data: { user } } = await supabase.auth.getUser(authHeader || '');
@@ -225,11 +225,26 @@ serve(async (req) => {
         if (user) {
           const { data: subscription } = await supabase
             .from('user_subscriptions')
-            .select('tier')
+            .select('tier, audio_per_month, audio_uploads_this_month')
             .eq('user_id', user.id)
             .single();
           
-          if (subscription?.tier !== 'pro' && subscription?.tier !== 'annual') {
+          if (subscription?.tier === 'free') {
+            // Free tier: check audio upload limits
+            const audioLimit = subscription.audio_per_month || 2;
+            const audioUsed = subscription.audio_uploads_this_month || 0;
+            
+            if (audioUsed >= audioLimit) {
+              console.log('[analyze-video] Free user audio limit reached');
+              return new Response(
+                JSON.stringify({ 
+                  error: `Free tier limit: ${audioLimit} audio uploads/month. Upgrade to Pro for unlimited audio uploads.`,
+                  error_code: 'AUDIO_LIMIT_REACHED' 
+                }),
+                { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          } else if (subscription?.tier !== 'pro' && subscription?.tier !== 'annual') {
             console.log('[analyze-video] Non-Pro user attempted audio upload');
             return new Response(
               JSON.stringify({ 
@@ -1181,6 +1196,18 @@ ${transcriptSource === 'metadata-only'
       if (incrementError) {
         console.error('Error incrementing video count:', incrementError);
         // Non-fatal, don't block the response
+      }
+      
+      // Also increment audio count if this was an audio upload
+      if (audioUpload) {
+        const { error: audioIncrementError } = await supabase.rpc('increment_audio_count', {
+          p_user_id: userId
+        });
+        
+        if (audioIncrementError) {
+          console.error('Error incrementing audio count:', audioIncrementError);
+          // Non-fatal, don't block the response
+        }
       }
     } else {
       console.log('[analyze-video] Skipping video count increment for refresh operation');

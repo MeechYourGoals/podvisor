@@ -116,12 +116,27 @@ export const SubscriptionSection = () => {
       <div className="space-y-4">
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Videos this month</span>
+            <span className="text-muted-foreground">YouTube this month</span>
             <span className="font-medium">
-              {subscription.videos_analyzed_this_month} / {subscription.videos_per_month}
+              {subscription.videos_analyzed_this_month} / {subscription.videos_per_month === -1 ? '∞' : subscription.videos_per_month}
             </span>
           </div>
           <Progress value={videosUsagePercent} className="h-2" />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Audio uploads this month</span>
+            <span className="font-medium">
+              {subscription.audio_uploads_this_month || 0} / {subscription.audio_per_month === -1 ? '∞' : subscription.audio_per_month || 2}
+            </span>
+          </div>
+          {subscription.audio_per_month !== -1 && (
+            <Progress 
+              value={((subscription.audio_uploads_this_month || 0) / (subscription.audio_per_month || 2)) * 100} 
+              className="h-2" 
+            />
+          )}
         </div>
 
         <div className="space-y-2">
@@ -142,6 +157,7 @@ export const SubscriptionSection = () => {
                 <li>• Unlimited YouTube analyses</li>
                 <li>• Unlimited audio file uploads</li>
                 <li>• Up to 10 context profiles</li>
+                <li>• Unlimited folders per profile</li>
                 <li>• Priority support</li>
                 <li>• Advanced insights</li>
               </ul>
