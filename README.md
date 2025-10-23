@@ -1,8 +1,6 @@
-# Chravel - AI-Native Travel & Event Management
+# Podvisor - AI-Powered YouTube Video Analysis
 
-A collaborative platform for travel planning, logistics coordination, and event management with AI-powered assistance.
-
-> **Note**: This codebase is currently implementing "Podvisor" (YouTube video analysis) and requires feature development to match the Chravel specification. See `DEPLOYMENT_READINESS.md` for details.
+Extract personalized insights from any YouTube video with AI-powered analysis. Get universal insights and personalized recommendations based on your unique context, role, and goals.
 
 ## Project info
 
