@@ -437,9 +437,15 @@ ${i.notes ? `\n**Notes**: ${i.notes}` : ''}
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => window.open(bookmark.videos.youtube_url, '_blank')}
+                          asChild
                         >
-                          Watch
+                          <a 
+                            href={bookmark.videos.youtube_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Watch
+                          </a>
                         </Button>
                         <Button
                           size="sm"

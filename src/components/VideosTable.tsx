@@ -460,12 +460,16 @@ const VideosTable = ({ onVideoSelect, onBookmark, refreshTrigger, isAnonymous = 
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem
-                        onClick={() => window.open(video.youtube_url, "_blank")}
-                        className="gap-2"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        Watch Now
+                      <DropdownMenuItem asChild>
+                        <a 
+                          href={video.youtube_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Watch Now
+                        </a>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => onVideoSelect(video.id)}

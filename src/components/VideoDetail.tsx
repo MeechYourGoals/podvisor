@@ -504,11 +504,17 @@ ${insight.action_items.map(item => `- ${item}`).join('\n')}` : ''}
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => window.open(video.youtube_url, '_blank')}
                     disabled={(video as any).is_audio_upload}
+                    asChild
                   >
-                    <Youtube className="h-4 w-4 mr-1" />
-                    {(video as any).is_audio_upload ? 'Audio' : 'Watch'}
+                    <a 
+                      href={(video as any).is_audio_upload ? undefined : video.youtube_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Youtube className="h-4 w-4 mr-1" />
+                      {(video as any).is_audio_upload ? 'Audio' : 'Watch'}
+                    </a>
                   </Button>
                   <Button size="sm" variant="outline" onClick={handleBookmarkVideo}>
                     <Bookmark className="h-4 w-4" />
