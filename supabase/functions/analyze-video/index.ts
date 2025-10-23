@@ -210,6 +210,8 @@ serve(async (req) => {
     let transcriptSource = 'none';
     let videoMetadata: any = {};
     let videoId = '';
+    let videoTitle = '';
+    let channelName = '';
 
     // Handle audio upload vs YouTube video
     if (audioUpload) {
@@ -376,8 +378,10 @@ Return structured data.`;
         tags: audioMetadata.tags || ['audio-upload'],
         description: audioMetadata.summary || '',
       };
-      
+
       videoId = videoMetadata.video_id;
+      videoTitle = videoMetadata.title;
+      channelName = 'Audio Upload';
       
       console.log('[analyze-video] Audio transcribed:', {
         transcriptLength: transcript.length,
@@ -397,12 +401,25 @@ Return structured data.`;
 
       // Get video metadata from YouTube oEmbed
       console.log('[analyze-video] Fetching oEmbed metadata');
-      const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-      const oembedResponse = await fetch(oembedUrl);
-      const oembedData = await oembedResponse.json();
-      
-      const videoTitle = oembedData.title;
-      const channelName = oembedData.author_name;
+      try {
+        const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+        const oembedResponse = await fetch(oembedUrl);
+
+        if (!oembedResponse.ok) {
+          console.warn('[analyze-video] oEmbed fetch failed with status:', oembedResponse.status);
+          throw new Error(`oEmbed API returned ${oembedResponse.status}`);
+        }
+
+        const oembedData = await oembedResponse.json();
+        videoTitle = oembedData.title || 'Unknown Video';
+        channelName = oembedData.author_name || 'Unknown Channel';
+      } catch (oembedError) {
+        console.error('[analyze-video] Failed to fetch oEmbed metadata:', oembedError);
+        // Fallback values if oEmbed fails
+        videoTitle = `YouTube Video ${videoId}`;
+        channelName = 'YouTube';
+        console.log('[analyze-video] Using fallback metadata');
+      }
 
       console.log('[analyze-video] Video metadata:', { videoTitle, channelName });
 
@@ -553,10 +570,23 @@ QUALITY STANDARDS (FULL TRANSCRIPT MODE):
 - Connect insights to real-world application
 - Base all insights on ACTUAL TRANSCRIPT content`}`;
 
+    // Defensive check: Ensure metadata variables are defined
+    const safeVideoTitle = videoTitle || 'Unknown Content';
+    const safeChannelName = channelName || 'Unknown Source';
+    const safeVideoUrl = videoUrl || '';
+
+    console.log('[analyze-video] Building AI prompt with metadata:', {
+      videoTitle: safeVideoTitle,
+      channelName: safeChannelName,
+      videoUrl: safeVideoUrl,
+      transcriptLength: transcript.length,
+      transcriptSource
+    });
+
     const userPrompt = `${transcript && transcriptSource !== 'metadata-only' ? `FULL TRANSCRIPT:\n${transcript.slice(0, 50000)}\n\n` : ''}VIDEO METADATA:
-Title: ${videoTitle}
-Source: ${channelName}
-URL: ${videoUrl}${transcriptSource === 'metadata-only' ? `\n\nIMPORTANT: No transcript available. Generate insights based on the video title, channel expertise, and typical content in this domain.` : ''}
+Title: ${safeVideoTitle}
+Source: ${safeChannelName}
+URL: ${safeVideoUrl}${transcriptSource === 'metadata-only' ? `\n\nIMPORTANT: No transcript available. Generate insights based on the video title, channel expertise, and typical content in this domain.` : ''}
 
 ${userProfile ? `USER PROFILE (analyze through this lens):
 - Name: ${userProfile.profile_name}
