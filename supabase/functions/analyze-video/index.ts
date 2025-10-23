@@ -440,12 +440,20 @@ Return structured data.`;
           transcript = await fetchTimedTextTranscript(videoId);
           transcriptSource = 'timedtext';
         } catch (timedtextError) {
-          console.log('[analyze-video] Tier 2 (timedtext) failed, using metadata-only analysis');
+          console.log('[analyze-video] Tier 2 (timedtext) failed, trying Tier 3 (Perplexity)');
           
-          // Tier 3: Metadata-only analysis
-          console.log('[analyze-video] Using metadata-only analysis');
-          transcript = `Video Title: ${videoTitle}\nChannel: ${channelName}\nURL: ${videoUrl}\n\nNote: No transcript available. This is a metadata-only analysis.`;
-          transcriptSource = 'metadata-only';
+          // Tier 3: Try Perplexity AI analysis
+          try {
+            transcript = await fetchPerplexityAnalysis(videoUrl, videoTitle);
+            transcriptSource = 'perplexity';
+          } catch (perplexityError) {
+            console.log('[analyze-video] Tier 3 (Perplexity) failed, using Tier 4 (metadata-only)');
+            
+            // Tier 4: Metadata-only analysis (last resort)
+            console.log('[analyze-video] Using metadata-only analysis');
+            transcript = `Video Title: ${videoTitle}\nChannel: ${channelName}\nURL: ${videoUrl}\n\nNote: No transcript available. This is a metadata-only analysis.`;
+            transcriptSource = 'metadata-only';
+          }
         }
       }
       
