@@ -214,17 +214,17 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
       <Card className="mb-8 border-2 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Play className="h-5 w-5 text-primary" />
-                Analyze a Video
+            <div className="flex-1">
+              <CardTitle className="text-center space-y-1 mb-2">
+                <div className="text-2xl font-semibold">YAYA</div>
+                <div className="text-base font-normal text-muted-foreground">Your AI YouTube Advisor</div>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-center">
                 Paste any YouTube URL to extract expert insights
               </CardDescription>
             </div>
             {isAnonymous && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-xs absolute top-6 right-6">
                 {anonymousCount}/3 free
               </Badge>
             )}

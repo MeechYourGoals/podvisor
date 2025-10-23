@@ -3,7 +3,7 @@ import { Link2, Sparkles, Target } from 'lucide-react';
 const steps = [
   {
     icon: Link2,
-    title: "Upload Your Content",
+    title: "Upload Content (YouTube or Audio)",
     description: "Paste YouTube URLs or upload audio files (podcasts, meetings, lectures)"
   },
   {

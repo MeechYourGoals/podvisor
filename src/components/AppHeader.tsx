@@ -13,8 +13,8 @@ export const AppHeader = () => {
       <div className="container flex h-12 items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="flex flex-col leading-none">
-            <span className="text-2xl font-display font-bold text-foreground">YAYA</span>
-            <span className="text-[10px] text-muted-foreground">by Podvisor</span>
+            <span className="text-2xl font-display font-bold text-red-600 dark:text-red-500">Podvisor</span>
+            <span className="text-[10px] text-muted-foreground">AI Content Analysis</span>
           </div>
         </div>
         

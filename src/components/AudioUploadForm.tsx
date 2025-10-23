@@ -168,25 +168,25 @@ export const AudioUploadForm = ({ onAnalysisComplete, subscription }: AudioUploa
     <Card className="mb-8 border-2 shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Music className="h-5 w-5 text-primary" />
-              Upload Audio File
+          <div className="flex-1">
+            <CardTitle className="text-center space-y-1 mb-2">
+              <div className="text-2xl font-semibold">YAYA</div>
+              <div className="text-base font-normal text-muted-foreground">Your Audio, Your Advice</div>
+            </CardTitle>
+            <CardDescription className="text-center">
+              {isPro || isAnonymous
+                ? 'Upload podcasts, meetings, lectures - any audio content'
+                : 'Upgrade to Pro to analyze audio files'}
               {!isAnonymous && !isPro && (
                 <Badge variant="secondary" className="ml-2">
                   <Crown className="h-3 w-3 mr-1" />
                   Pro
                 </Badge>
               )}
-            </CardTitle>
-            <CardDescription>
-              {isPro || isAnonymous
-                ? 'Upload podcasts, meetings, lectures - any audio content'
-                : 'Upgrade to Pro to analyze audio files'}
             </CardDescription>
           </div>
           {isAnonymous && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs absolute top-6 right-6">
               {anonymousAudioCount}/1 free
             </Badge>
           )}
