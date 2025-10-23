@@ -6,9 +6,9 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const VITE_SUPABASE_URL = env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const VITE_SUPABASE_PUBLISHABLE_KEY = env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  const VITE_SUPABASE_PROJECT_ID = env.VITE_SUPABASE_PROJECT_ID || process.env.VITE_SUPABASE_PROJECT_ID;
+  const VITE_SUPABASE_URL = env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://wnbybsgjdmguzviivpaj.supabase.co";
+  const VITE_SUPABASE_PUBLISHABLE_KEY = env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InduYnlic2dqZG1ndXp2aWl2cGFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxMjQzODcsImV4cCI6MjA3NTcwMDM4N30.sKrOB2w9MUMDZbGOVxZvU-5VNhODIev34vgCIEHG5S8";
+  const VITE_SUPABASE_PROJECT_ID = env.VITE_SUPABASE_PROJECT_ID || process.env.VITE_SUPABASE_PROJECT_ID || "wnbybsgjdmguzviivpaj";
   return {
     server: {
       host: "::",
