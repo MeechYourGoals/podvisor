@@ -194,3 +194,41 @@ body {
 .input-safe-bottom {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
+
+/* Chat layout utilities — Web + Mobile parity */
+@layer utilities {
+  /* Container that holds messages list and input bar */
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    /* Critical for nested scroll areas to actually scroll */
+    min-height: 0;
+    height: 100%;
+  }
+
+  /* Scrollable message list; only this should scroll */
+  .chat-messages {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    max-height: 100%;
+    /* Smooth programmatic scroll (auto-scroll to bottom, etc.) */
+    scroll-behavior: smooth;
+    /* iOS momentum scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent parent scroll chaining */
+    overscroll-behavior: contain;
+    /* Guard against flex children preventing scroll */
+    min-height: 0;
+  }
+
+  /* Input bar pinned to the bottom of the chat view */
+  .chat-input {
+    position: sticky;
+    bottom: 0;
+    background-color: hsl(var(--background));
+    /* Keep above list content */
+    z-index: 10;
+    /* Visual separation from messages */
+    border-top: 1px solid hsl(var(--border));
+  }
+}
