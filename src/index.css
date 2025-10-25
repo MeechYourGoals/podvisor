@@ -263,3 +263,16 @@ body {
     opacity: 0.4; 
   }
 }
+
+/* Desktop Chat Container Utility - Critical for Web Scroll Fix */
+@media screen and (min-width: 1025px) {
+  .desktop-chat-container {
+    height: calc(100vh - 280px);
+    max-height: 800px;
+    min-height: 400px;
+    overflow: hidden;
+  }
+}
+
+/* Alternative: Use this class on TripTabs tab content wrapper */
+/* Already applied via inline Tailwind in TripTabs.tsx */
