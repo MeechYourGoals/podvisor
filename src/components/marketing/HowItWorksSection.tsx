@@ -23,8 +23,8 @@ export const HowItWorksSection = () => {
     <section className="py-12">
       <div className="max-w-5xl mx-auto">
         <div className="text-center space-y-3 mb-12">
-          <h2 className="text-3xl font-display font-bold">How YAYA Works</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-6xl font-display font-bold">How YAYA Works</h2>
+          <p className="text-2xl text-muted-foreground">
             Turn hours of video content into actionable insights in minutes
           </p>
         </div>
@@ -36,8 +36,8 @@ export const HowItWorksSection = () => {
                 <step.icon className="h-6 w-6 text-primary" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-semibold">{step.title}</h3>
-                <p className="text-sm text-muted-foreground">{step.description}</p>
+                <h3 className="text-4xl font-semibold">{step.title}</h3>
+                <p className="text-xl text-muted-foreground">{step.description}</p>
               </div>
             </div>
           ))}

@@ -123,10 +123,10 @@ export const PricingCards = () => {
       
       <div className="relative space-y-16">
         <div className="text-center space-y-4">
-          <h2 className="text-4xl sm:text-5xl font-bold font-display">
+          <h2 className="text-7xl sm:text-8xl font-bold font-display">
             Start Learning Smarter Today
           </h2>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-4xl text-muted-foreground">
             Choose the plan that fits your needs
           </p>
         </div>
@@ -148,7 +148,7 @@ export const PricingCards = () => {
                   }`}
                 >
                   {plan.popular && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent text-primary-foreground text-sm px-5 py-1.5 rounded-full font-semibold whitespace-nowrap shadow-glow">
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent text-primary-foreground text-xl px-5 py-1.5 rounded-full font-semibold whitespace-nowrap shadow-glow">
                       Most Popular
                     </div>
                   )}
@@ -162,15 +162,15 @@ export const PricingCards = () => {
                       <Icon className="h-7 w-7 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                      <CardDescription className="text-sm mt-2">
+                      <CardTitle className="text-5xl">{plan.name}</CardTitle>
+                      <CardDescription className="text-xl mt-2">
                         {plan.headline}
                       </CardDescription>
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-baseline justify-center gap-1">
-                        <span className="text-5xl font-bold">{plan.price}</span>
-                        <span className="text-muted-foreground text-lg">{plan.period}</span>
+                        <span className="text-8xl font-bold">{plan.price}</span>
+                        <span className="text-muted-foreground text-3xl">{plan.period}</span>
                       </div>
                     </div>
                   </CardHeader>
@@ -178,7 +178,7 @@ export const PricingCards = () => {
                   <CardContent className="flex-1 p-8 pt-0">
                     <ul className="space-y-3">
                       {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-3 text-sm">
+                        <li key={feature} className="flex items-start gap-3 text-xl">
                           <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                           <span>{feature}</span>
                         </li>

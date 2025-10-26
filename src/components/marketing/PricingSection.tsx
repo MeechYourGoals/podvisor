@@ -15,12 +15,12 @@ const features = [
 const renderCell = (value: string | boolean) => {
   if (typeof value === 'boolean') {
     return value ? (
-      <Check className="h-5 w-5 text-primary mx-auto" />
+      <Check className="h-8 w-8 text-primary mx-auto" />
     ) : (
-      <X className="h-5 w-5 text-muted-foreground mx-auto opacity-30" />
+      <X className="h-8 w-8 text-muted-foreground mx-auto opacity-30" />
     );
   }
-  return <span className="text-sm text-foreground">{value}</span>;
+  return <span className="text-xl text-foreground">{value}</span>;
 };
 
 export const PricingSection = () => {
@@ -28,8 +28,8 @@ export const PricingSection = () => {
     <section className="py-16 sm:py-24 border-t border-border">
       <div className="space-y-12">
         <div className="text-center space-y-4">
-          <h2 className="text-3xl sm:text-4xl font-bold">Choose Your Plan</h2>
-          <p className="text-lg text-muted-foreground">
+          <h2 className="text-6xl sm:text-7xl font-bold">Choose Your Plan</h2>
+          <p className="text-3xl text-muted-foreground">
             Select the perfect plan for your learning journey
           </p>
         </div>
@@ -39,11 +39,11 @@ export const PricingSection = () => {
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b-2 border-border">
-                <th className="text-left py-4 px-6 text-lg font-semibold">Feature</th>
-                <th className="text-center py-4 px-6 text-lg font-semibold">Free</th>
-                <th className="text-center py-4 px-6 text-lg font-semibold">Pro</th>
-                <th className="text-center py-4 px-6 text-lg font-semibold relative">
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                <th className="text-left py-4 px-6 text-3xl font-semibold">Feature</th>
+                <th className="text-center py-4 px-6 text-3xl font-semibold">Free</th>
+                <th className="text-center py-4 px-6 text-3xl font-semibold">Pro</th>
+                <th className="text-center py-4 px-6 text-3xl font-semibold relative">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-lg px-3 py-1 rounded-full whitespace-nowrap">
                     Best Value
                   </div>
                   Annual Pro
@@ -58,7 +58,7 @@ export const PricingSection = () => {
                     index === features.length - 1 ? 'border-b-0' : ''
                   }`}
                 >
-                  <td className="py-4 px-6 text-sm font-medium">{feature.name}</td>
+                  <td className="py-4 px-6 text-xl font-medium">{feature.name}</td>
                   <td className="py-4 px-6 text-center">{renderCell(feature.free)}</td>
                   <td className="py-4 px-6 text-center">{renderCell(feature.pro)}</td>
                   <td className="py-4 px-6 text-center bg-primary/5">{renderCell(feature.annual)}</td>
@@ -78,16 +78,16 @@ export const PricingSection = () => {
               }`}
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">{tier === 'Annual' ? 'Annual Pro' : tier}</h3>
+                <h3 className="text-4xl font-bold">{tier === 'Annual' ? 'Annual Pro' : tier}</h3>
                 {tier === 'Annual' && (
-                  <span className="bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full">
+                  <span className="bg-primary text-primary-foreground text-lg px-3 py-1 rounded-full">
                     Best Value
                   </span>
                 )}
               </div>
               <div className="space-y-3">
                 {features.map((feature) => (
-                  <div key={feature.name} className="flex items-center justify-between text-sm">
+                  <div key={feature.name} className="flex items-center justify-between text-xl">
                     <span className="text-muted-foreground">{feature.name}</span>
                     <span className="font-medium">
                       {renderCell(feature[tier.toLowerCase() as keyof typeof feature])}

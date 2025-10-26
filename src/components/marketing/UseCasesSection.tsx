@@ -51,10 +51,10 @@ export const UseCasesSection = () => {
     <section className="py-12 border-t border-border">
       <div className="max-w-5xl mx-auto">
         <div className="text-center space-y-3 mb-12">
-          <h2 className="text-3xl font-display font-bold">
+          <h2 className="text-6xl font-display font-bold">
             Who Uses Podvisor
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-2xl text-muted-foreground">
             Learn from the world's best experts - personalized for your goals
           </p>
         </div>
@@ -71,19 +71,19 @@ export const UseCasesSection = () => {
                     <useCase.icon className="h-6 w-6" />
                   </div>
                   <div className="flex-1">
-                    <CardTitle className="text-xl mb-2">{useCase.title}</CardTitle>
-                    <CardDescription className="text-sm">
+                    <CardTitle className="text-4xl mb-2">{useCase.title}</CardTitle>
+                    <CardDescription className="text-xl">
                       {useCase.description}
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0 space-y-3">
-                <div className="text-sm">
+                <div className="text-xl">
                   <span className="text-muted-foreground">Example videos: </span>
                   <span className="text-foreground">{useCase.examples}</span>
                 </div>
-                <div className="text-xs font-medium text-primary">
+                <div className="text-lg font-medium text-primary">
                   🎙️ {useCase.insight}
                 </div>
               </CardContent>
