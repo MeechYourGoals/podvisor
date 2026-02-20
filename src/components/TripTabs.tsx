@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { TripChat } from "./TripChat";
+import { BudgetTab } from "./BudgetTab";
 import { MessageSquare, MapPin, Calendar, Users, Receipt } from "lucide-react";
 
 interface TripTabsProps {
@@ -42,10 +43,11 @@ export function TripTabs({ tripId, currentUserId, currentUserName }: TripTabsPro
         );
       case "budget":
         return (
-          <div className="p-6 text-center text-muted-foreground">
-            <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Budget view coming soon</p>
-          </div>
+          <BudgetTab
+            tripId={tripId}
+            currentUserId={currentUserId}
+            currentUserName={currentUserName}
+          />
         );
       default:
         return null;

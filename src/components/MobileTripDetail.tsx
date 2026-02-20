@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { TripChat } from "./TripChat";
+import { BudgetTab } from "./BudgetTab";
 import { Button } from "./ui/button";
 import { ArrowLeft, Menu, MapPin, Calendar, Users, Receipt } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +36,16 @@ export function MobileTripDetail({
         return (
           <div className="h-[calc(100vh-140px)]">
             <TripChat
+              tripId={tripId}
+              currentUserId={currentUserId}
+              currentUserName={currentUserName}
+            />
+          </div>
+        );
+      case "budget":
+        return (
+          <div className="h-[calc(100vh-140px)] overflow-auto">
+            <BudgetTab
               tripId={tripId}
               currentUserId={currentUserId}
               currentUserName={currentUserName}

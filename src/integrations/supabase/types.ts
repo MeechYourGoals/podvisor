@@ -516,6 +516,42 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_payments: {
+        Row: {
+          id: string
+          trip_id: string
+          user_id: string | null
+          amount: number
+          currency: string
+          description: string | null
+          payer_name: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          trip_id: string
+          user_id: string | null
+          amount: number
+          currency?: string
+          description?: string | null
+          payer_name?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          trip_id?: string
+          user_id?: string | null
+          amount?: number
+          currency?: string
+          description?: string | null
+          payer_name?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       videos: {
         Row: {
           analyzed_at: string | null
