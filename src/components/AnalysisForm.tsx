@@ -5,13 +5,12 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Play, ChevronDown, Sparkles, Crown } from 'lucide-react';
+import { Loader2, Play, ChevronDown, Sparkles, Youtube } from 'lucide-react';
 import { ProfileQuickSwitcher } from './ProfileQuickSwitcher';
 import { useProfileContext } from '@/contexts/ProfileContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,7 +18,11 @@ import { AnonymousVideoStorage } from '@/lib/anonymousVideoStorage';
 import { AnonymousLimitModal } from './AnonymousLimitModal';
 
 const videoSchema = z.object({
-  videoUrl: z.string().url('Please enter a valid YouTube URL').includes('youtube.com', { message: 'Please enter a valid YouTube URL' }).or(z.string().includes('youtu.be', { message: 'Please enter a valid YouTube URL' })),
+  videoUrl: z
+    .string()
+    .url('Please enter a valid YouTube URL')
+    .includes('youtube.com', { message: 'Please enter a valid YouTube URL' })
+    .or(z.string().includes('youtu.be', { message: 'Please enter a valid YouTube URL' })),
 });
 
 type VideoFormData = z.infer<typeof videoSchema>;
@@ -36,10 +39,9 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
   const [isPersonalizedOpen, setIsPersonalizedOpen] = useState(false);
   const [limitModalOpen, setLimitModalOpen] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
-  const [anonymousProfile, setAnonymousProfile] = useState(() => {
-    // Load from sessionStorage if exists
-    return AnonymousVideoStorage.getAnonymousProfile() || '';
-  });
+  const [anonymousProfile, setAnonymousProfile] = useState(
+    () => AnonymousVideoStorage.getAnonymousProfile() || '',
+  );
   const { toast } = useToast();
 
   const isAnonymous = !user;
@@ -51,9 +53,7 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
   });
 
   useEffect(() => {
-    if (user) {
-      loadSubscription();
-    }
+    if (user) loadSubscription();
   }, [user]);
 
   const loadSubscription = async () => {
@@ -67,25 +67,19 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
 
   const useSampleLink = () => {
     setValue('videoUrl', 'https://www.youtube.com/watch?v=xguam0TKMw8');
-    // Immediately trigger analysis after setting sample URL
     setTimeout(() => {
-      if (!isAnalyzing) {
-        handleSubmit(handleAnalyze)();
-      }
+      if (!isAnalyzing) handleSubmit(handleAnalyze)();
     }, 0);
   };
 
   const handleAnalyze = async (data: VideoFormData) => {
-    // Check anonymous limit before starting
     if (isAnonymous && !canAnalyze) {
       setLimitModalOpen(true);
-      console.log('[Analytics] Anonymous limit reached - modal shown');
       return;
     }
 
     setIsAnalyzing(true);
     try {
-      // Save anonymous profile to sessionStorage if provided
       if (isAnonymous && anonymousProfile.trim()) {
         AnonymousVideoStorage.setAnonymousProfile(anonymousProfile.trim());
       }
@@ -94,52 +88,36 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
         body: {
           videoUrl: data.videoUrl,
           profileId: activeProfileId,
-          isAnonymous: isAnonymous,
+          isAnonymous,
           anonymousProfile: isAnonymous && anonymousProfile.trim() ? anonymousProfile.trim() : undefined,
         },
       });
 
       if (error) {
-        if (error.message?.includes('402') || error.message?.includes('Payment')) {
-          throw new Error('Payment required. Please upgrade your plan.');
-        }
-        if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
-          throw new Error('Rate limit exceeded. Please try again later.');
-        }
+        if (error.message?.includes('402')) throw new Error('Payment required. Please upgrade your plan.');
+        if (error.message?.includes('429')) throw new Error('Rate limit exceeded. Please try again later.');
         throw error;
       }
 
-      // Handle error codes from edge function
       if (result?.error_code) {
         const errorMessages: Record<string, string> = {
-          'AI_NO_CHOICES': "The AI didn't return structured insights. Please try again or another video.",
-          'AI_NO_TOOL_CALL': "The AI didn't return structured insights. Please try again or another video.",
-          'AI_INVALID_STRUCTURE': "The AI returned incomplete data. Please try again.",
-          'TRANSCRIPT_UNAVAILABLE': "No transcript found; using limited metadata. Results may be lighter.",
-          'AI_GATEWAY_ERROR': result.error || 'AI processing error occurred.',
-          'RATE_LIMIT': 'Rate limit exceeded. Please try again later.',
-          'PAYMENT_REQUIRED': 'Payment required. Please upgrade your plan.',
+          AI_NO_CHOICES: "The AI didn't return structured insights. Please try again.",
+          AI_NO_TOOL_CALL: "The AI didn't return structured insights. Please try again.",
+          AI_INVALID_STRUCTURE: 'The AI returned incomplete data. Please try again.',
+          TRANSCRIPT_UNAVAILABLE: 'No transcript found; using limited metadata.',
+          AI_GATEWAY_ERROR: result.error || 'AI processing error occurred.',
+          RATE_LIMIT: 'Rate limit exceeded. Please try again later.',
+          PAYMENT_REQUIRED: 'Payment required. Please upgrade your plan.',
         };
-        
-        const message = errorMessages[result.error_code] || result.error || 'An error occurred during analysis.';
-        throw new Error(message);
+        throw new Error(errorMessages[result.error_code] || result.error || 'An error occurred.');
       }
 
-      // For anonymous users, store in sessionStorage
       if (isAnonymous && result) {
-        // Add unique IDs to insights and personalized insights
-        const insightsWithIds = (result.insights || []).map((insight: any) => ({
-          ...insight,
-          id: insight.id || crypto.randomUUID()
-        }));
-        
-        const personalizedInsightsWithIds = (result.personalizedInsights || []).map((insight: any) => ({
-          ...insight,
-          id: insight.id || crypto.randomUUID()
-        }));
-
+        const insightsWithIds = (result.insights || []).map((i: any) => ({ ...i, id: i.id || crypto.randomUUID() }));
+        const personalizedInsightsWithIds = (result.personalizedInsights || []).map((i: any) => ({ ...i, id: i.id || crypto.randomUUID() }));
         const videoId = result.videoId || crypto.randomUUID();
-        const anonymousVideo = {
+
+        AnonymousVideoStorage.add({
           id: videoId,
           title: result.videoMetadata?.title || 'Untitled Video',
           youtube_url: data.videoUrl,
@@ -153,216 +131,148 @@ const AnalysisForm = ({ onAnalysisComplete }: AnalysisFormProps) => {
           thumbnail_url: result.videoMetadata?.thumbnail_url,
           insightCount: result.insightCount,
           personalizedCount: result.personalizedCount,
-        };
-
-        AnonymousVideoStorage.add(anonymousVideo);
-        console.log('[Analytics] Anonymous video analysis', {
-          videoCount: AnonymousVideoStorage.count(),
-          timestamp: new Date().toISOString()
         });
 
-        // Call completion callback with video ID and anonymous flag
         onAnalysisComplete(videoId, true);
       } else if (result?.videoId) {
-        // For authenticated users, call with videoId from database
         onAnalysisComplete(result.videoId, false);
       }
 
-      // Success with possible warnings
-      let successMessage = `Video analyzed! ${result.insightCount || 0} insights extracted.`;
-      
-      if (result.transcriptSource === 'perplexity') {
-        successMessage += ' (AI analysis method)';
-      } else if (result.transcriptSource === 'metadata-only') {
-        successMessage += ' (Limited - metadata only)';
-      }
-      
       toast({
-        title: "Success!",
-        description: successMessage,
+        title: 'Analyzed',
+        description: `${result.insightCount || 0} insights extracted.`,
       });
-      
-      // Show warnings if any
-      if (result?.warnings && Array.isArray(result.warnings)) {
-        result.warnings.forEach((warning: string) => {
-          toast({
-            title: "Note",
-            description: warning,
-            variant: "default",
-          });
-        });
-      }
 
-      // Note: onAnalysisComplete is now called earlier in the anonymous/authenticated blocks
       reset();
       setIsAdvancedOpen(false);
     } catch (error: any) {
       console.error('Analysis error:', error);
-      
-      // Mobile-friendly error messages with clear guidance
       let errorMessage = error.message || 'Failed to analyze video';
-      
-      if (error.message?.includes('fetch') || error.message?.includes('network')) {
-        errorMessage = '⚠️ Network error. Check your connection and try again.';
-      } else if (error.message?.includes('timeout')) {
-        errorMessage = '⏱️ Request timed out. Try a shorter video or retry in a moment.';
-      } else if (error.message?.includes('Invalid YouTube URL')) {
-        errorMessage = '🎥 Invalid YouTube link. Make sure it\'s a valid YouTube video URL.';
-      } else if (error.message?.includes('Rate limit')) {
-        errorMessage = '⏸️ Too many requests. Please wait a moment and try again.';
-      } else if (error.message?.includes('Payment')) {
-        errorMessage = '💳 Upgrade required. Sign up for a Pro account to continue.';
-      }
-      
-      toast({
-        title: "Analysis Failed",
-        description: errorMessage,
-        variant: "destructive",
-        duration: 5000,
-      });
+      if (error.message?.includes('network')) errorMessage = 'Network error. Check your connection and try again.';
+      else if (error.message?.includes('timeout')) errorMessage = 'Request timed out. Try again in a moment.';
+
+      toast({ title: 'Analysis failed', description: errorMessage, variant: 'destructive', duration: 5000 });
     } finally {
       setIsAnalyzing(false);
     }
   };
 
+  const remaining = isAnonymous
+    ? `${Math.max(0, 3 - anonymousCount)} free left`
+    : subscription?.tier === 'free'
+      ? `${subscription.videos_analyzed_this_month}/${subscription.videos_per_month} this month`
+      : null;
+
   return (
     <>
-      <Card className="mb-8 border-2 shadow-sm">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <CardTitle className="text-center space-y-1 mb-2">
-                <div className="text-2xl font-semibold">YAYA</div>
-                <div className="text-base font-normal text-muted-foreground">Your AI YouTube Advisor</div>
-              </CardTitle>
-              <CardDescription className="text-center">
-                Paste any YouTube URL to extract expert insights
-              </CardDescription>
-            </div>
-            {isAnonymous && (
-              <Badge variant="secondary" className="text-xs absolute top-6 right-6">
-                {anonymousCount}/3 free
-              </Badge>
-            )}
-          </div>
-          {!isAnonymous && subscription && subscription.tier === 'free' && (
-            <Badge variant="secondary" className="text-xs">
-              {subscription.videos_analyzed_this_month}/{subscription.videos_per_month} used
-            </Badge>
-          )}
-        </CardHeader>
-        <CardContent>
-          {isAnonymous && anonymousCount > 0 && (
-            <div className="mb-4 p-3 bg-muted/50 border rounded-lg">
-              <p className="text-sm">
-                <strong>Free trial active:</strong> Sign up to save analyses and unlock 4/month
-              </p>
-            </div>
-          )}
-          <form onSubmit={handleSubmit(handleAnalyze)} className="space-y-4">
-          <div className="space-y-2">
+      <Card className="mb-4">
+        <CardContent className="p-4 sm:p-5">
+          <form onSubmit={handleSubmit(handleAnalyze)} className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label htmlFor="videoUrl">YouTube Video URL</Label>
-              <Button
+              <Label htmlFor="videoUrl" className="text-footnote font-medium flex items-center gap-1.5 text-muted-foreground">
+                <Youtube className="h-3.5 w-3.5" />
+                YouTube URL
+              </Label>
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
                 onClick={useSampleLink}
                 disabled={isAnalyzing}
-                className="h-auto py-1 text-xs"
+                className="text-caption text-primary hover:underline disabled:opacity-50 flex items-center gap-1"
               >
-                <Sparkles className="mr-1 h-3 w-3" />
-                Use sample
+                <Sparkles className="h-3 w-3" />
+                Try sample
+              </button>
+            </div>
+
+            <div className="relative">
+              <Input
+                id="videoUrl"
+                type="url"
+                placeholder="Paste a YouTube link…"
+                {...register('videoUrl')}
+                disabled={isAnalyzing}
+                className="h-12 pr-32 rounded-xl text-[15px] bg-card-elevated border-border focus-visible:ring-primary/30"
+              />
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isAnalyzing}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 px-4"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Analyzing
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-3.5 w-3.5" />
+                    Analyze
+                  </>
+                )}
               </Button>
             </div>
-            <Input
-              id="videoUrl"
-              type="url"
-              placeholder="YouTube URL..."
-              {...register('videoUrl')}
-              disabled={isAnalyzing}
-            />
             {errors.videoUrl && (
-              <p className="text-sm text-destructive">{errors.videoUrl.message}</p>
+              <p className="text-caption text-destructive">{errors.videoUrl.message}</p>
             )}
-          </div>
 
-          {isAnonymous ? (
-            <Collapsible open={isPersonalizedOpen} onOpenChange={setIsPersonalizedOpen}>
-              <CollapsibleTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-between text-muted-foreground hover:text-foreground"
-                >
-                  <span className="text-sm flex items-center gap-2">
-                    <Sparkles className="h-3 w-3" />
-                    Get Personalized Insights (Optional)
-                  </span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isPersonalizedOpen ? 'rotate-180' : ''}`} />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-4 space-y-2">
-                <Label htmlFor="anonymousProfile" className="text-sm">
-                  Tell us about yourself for personalized insights
-                </Label>
-                <Textarea
-                  id="anonymousProfile"
-                  placeholder="Example: I'm a startup founder interested in AI and venture capital..."
-                  value={anonymousProfile}
-                  onChange={(e) => setAnonymousProfile(e.target.value)}
-                  disabled={isAnalyzing}
-                  className="min-h-[80px]"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Optional: Add context to get 10 personalized insights tailored to your goals
-                </p>
-              </CollapsibleContent>
-            </Collapsible>
-          ) : (
-            <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
-              <CollapsibleTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-between text-muted-foreground hover:text-foreground"
-                >
-                  <span className="text-sm">Advanced: Filter through a profile</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-4">
-                <ProfileQuickSwitcher />
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-
-          <Button type="submit" className="w-full" disabled={isAnalyzing}>
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing...
-              </>
+            {isAnonymous ? (
+              <Collapsible open={isPersonalizedOpen} onOpenChange={setIsPersonalizedOpen}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between text-footnote text-muted-foreground hover:text-foreground py-1.5"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3" />
+                      Add personal context for tailored insights
+                    </span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform ${isPersonalizedOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-2 space-y-1.5">
+                  <Textarea
+                    id="anonymousProfile"
+                    placeholder="e.g. I'm a startup founder interested in AI and venture capital…"
+                    value={anonymousProfile}
+                    onChange={(e) => setAnonymousProfile(e.target.value)}
+                    disabled={isAnalyzing}
+                    className="min-h-[72px] text-[14px] rounded-xl bg-card-elevated"
+                  />
+                  <p className="text-caption text-muted-foreground">
+                    Optional — unlocks 10 personalized insights.
+                  </p>
+                </CollapsibleContent>
+              </Collapsible>
             ) : (
-              <>
-                <Play className="mr-2 h-4 w-4" />
-                Analyze Video
-              </>
+              <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between text-footnote text-muted-foreground hover:text-foreground py-1.5"
+                  >
+                    <span>Filter through a profile</span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-2">
+                  <ProfileQuickSwitcher />
+                </CollapsibleContent>
+              </Collapsible>
             )}
-          </Button>
 
-          {!isAnonymous && (
-            <p className="text-xs text-muted-foreground text-center">
-              {activeProfileId ? 'Analyzing with selected profile' : 'Analyzing with your default profile'}
-            </p>
-          )}
-        </form>
-      </CardContent>
-    </Card>
+            {remaining && (
+              <p className="text-caption text-muted-foreground text-center">{remaining}</p>
+            )}
+          </form>
+        </CardContent>
+      </Card>
 
-    <AnonymousLimitModal open={limitModalOpen} onOpenChange={setLimitModalOpen} />
+      <AnonymousLimitModal open={limitModalOpen} onOpenChange={setLimitModalOpen} />
     </>
   );
 };

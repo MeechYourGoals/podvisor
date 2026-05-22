@@ -3,10 +3,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { ProfileProvider } from "./contexts/ProfileContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { MobileTabBar } from "./components/MobileTabBar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -16,16 +17,21 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const ChromeShell = () => {
+  const location = useLocation();
+  // Show mobile tab bar only on app routes (not auth / chat demo / trip demo)
+  const hideTabBar = ["/auth", "/reset-password", "/chat-demo"].includes(location.pathname)
+    || location.pathname.startsWith("/trip");
+  return hideTabBar ? null : <MobileTabBar />;
+};
+
 const App = () => {
   useEffect(() => {
-    // Configure iOS status bar
     if (window.Capacitor?.isNativePlatform()) {
       import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
         StatusBar.setStyle({ style: Style.Dark });
-        StatusBar.setBackgroundColor({ color: '#0f172a' });
-      }).catch(() => {
-        // Status bar plugin not available
-      });
+        StatusBar.setBackgroundColor({ color: '#0f0f10' });
+      }).catch(() => {});
     }
   }, []);
 
@@ -45,9 +51,9 @@ const App = () => {
                   <Route path="/chat-demo" element={<ChatDemo />} />
                   <Route path="/trip/:tripId" element={<TripDemo />} />
                   <Route path="/trip-demo" element={<TripDemo />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                <ChromeShell />
               </ProfileProvider>
             </BrowserRouter>
           </TooltipProvider>
