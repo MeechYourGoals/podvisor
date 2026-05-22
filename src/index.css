@@ -2,148 +2,201 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ============================================================
+   Podvisor design system — iOS-dark refined
+   All colors HSL, all tokens semantic.
+   ============================================================ */
 
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 240 10% 10%;
+    --foreground: 0 0% 9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 10%;
+    --card-foreground: 0 0% 9%;
+    --card-elevated: 0 0% 98%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 10%;
+    --popover-foreground: 0 0% 9%;
 
-    --primary: 0 100% 50%;
+    --primary: 0 84% 55%;
     --primary-foreground: 0 0% 100%;
+    --primary-glow: 0 84% 65%;
 
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 10% 10%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
 
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 46%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 42%;
 
-    --accent: 0 100% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 0 100% 50%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 84% 55%;
 
-    --radius: 1rem;
+    --radius: 0.875rem;
 
-    /* Glassmorphism */
-    --glass-bg: 255 255 255 / 0.05;
-    --glass-border: 255 255 255 / 0.1;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 9%;
+    --sidebar-primary: 0 84% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 9%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 0 84% 55%;
   }
 
   .dark {
-    --background: 240 10% 8%;
-    --foreground: 240 5% 96%;
+    /* iOS Settings dark — soft near-black, not pure */
+    --background: 0 0% 6%;
+    --foreground: 0 0% 96%;
 
-    --card: 240 8% 12%;
-    --card-foreground: 240 5% 96%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 96%;
+    --card-elevated: 0 0% 11%;
 
-    --popover: 240 8% 12%;
-    --popover-foreground: 240 5% 96%;
+    --popover: 0 0% 11%;
+    --popover-foreground: 0 0% 96%;
 
-    --primary: 0 90% 55%;
-    --primary-foreground: 240 10% 8%;
+    --primary: 0 84% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 0 84% 70%;
 
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 240 5% 96%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 96%;
 
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 0 90% 55%;
-    --accent-foreground: 240 10% 8%;
+    --accent: 0 0% 14%;
+    --accent-foreground: 0 0% 96%;
 
-    --destructive: 0 62.8% 40.6%;
-    --destructive-foreground: 240 5% 96%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 240 4% 18%;
-    --input: 240 4% 18%;
-    --ring: 0 90% 55%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 0 84% 60%;
 
-    /* Glassmorphism */
-    --glass-bg: 255 255 255 / 0.03;
-    --glass-border: 255 255 255 / 0.08;
+    --sidebar-background: 0 0% 9%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 0 84% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 16%;
+    --sidebar-ring: 0 84% 60%;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01", "ss03";
+    overscroll-behavior-y: none;
+  }
+
+  /* iOS-style focus rings — subtle, no chrome blue */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring/40 ring-offset-0;
+  }
+
+  /* Prevent the iOS rubber-band on body but allow scroll containers */
+  html, body {
+    overscroll-behavior-y: contain;
+  }
+
+  /* Selection */
+  ::selection {
+    background: hsl(var(--primary) / 0.25);
+  }
+}
+
+@layer components {
+  /* iOS-style grouped-list section header */
+  .ios-section-header {
+    @apply px-4 pt-6 pb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground;
+  }
+
+  /* Hairline divider matching iOS */
+  .hairline {
+    @apply border-border;
+  }
+
+  /* Surface with subtle inner-top highlight (mimics iOS card lift) */
+  .surface {
+    @apply bg-card border border-border rounded-2xl;
+    box-shadow:
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.03),
+      0 1px 2px 0 hsl(0 0% 0% / 0.04);
+  }
+  .dark .surface {
+    box-shadow:
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.04),
+      0 1px 2px 0 hsl(0 0% 0% / 0.5);
+  }
+
+  /* Frosted bar (tab bar, nav) */
+  .ios-blur-bar {
+    @apply bg-background/75 backdrop-blur-xl backdrop-saturate-150;
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
   }
 }
 
 @layer utilities {
-  .glass-card {
-    background: rgba(var(--glass-bg));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(var(--glass-border));
-  }
+  /* Type scale, iOS HIG inspired */
+  .text-display { @apply text-[44px] leading-[1.05] tracking-tight font-semibold; }
+  .text-title-1 { @apply text-[28px] leading-tight tracking-tight font-semibold; }
+  .text-title-2 { @apply text-[22px] leading-snug tracking-tight font-semibold; }
+  .text-title-3 { @apply text-[17px] leading-snug font-semibold; }
+  .text-body { @apply text-[15px] leading-relaxed; }
+  .text-footnote { @apply text-[13px] leading-snug; }
+  .text-caption { @apply text-[12px] leading-tight; }
 
   .glow-primary {
-    box-shadow: 0 0 20px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--primary) / 0.1);
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.15), 0 10px 30px -10px hsl(var(--primary) / 0.4);
   }
 
-  .glow-primary-lg {
-    box-shadow: 0 0 30px hsl(var(--primary) / 0.4), 0 0 60px hsl(var(--primary) / 0.2);
-  }
+  /* Safe-area helpers */
+  .pt-safe { padding-top: calc(env(safe-area-inset-top)); }
+  .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom)); }
+  .pb-tabbar { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)); }
 
-  @keyframes gradient-x {
-    0%, 100% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-  }
-
-  .animate-gradient-x {
-    background-size: 200% 200%;
-    animation: gradient-x 3s ease infinite;
+  /* No-select for chrome */
+  .chrome-no-select {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 }
 
-/* iOS Safe Area Support & Mobile Viewport Fixes */
-@supports (padding: env(safe-area-inset-bottom)) {
-  .pb-safe {
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-  }
-  .pt-safe {
-    padding-top: calc(0.5rem + env(safe-area-inset-top));
-  }
-}
-
-/* Critical Mobile Safari Viewport Fixes */
-/* Eliminates black box/buffer at bottom of mobile screens */
+/* Viewport / mobile container fixes */
 html {
   height: -webkit-fill-available;
 }
-
 body {
   min-height: 100vh;
-  /* Use dynamic viewport height for mobile Safari - prevents black box */
   min-height: -webkit-fill-available;
-  /* Fallback for browsers that support dvh (dynamic viewport height) */
   min-height: 100dvh;
   overflow-x: hidden;
 }
-
 #root {
   min-height: 100vh;
   min-height: -webkit-fill-available;
@@ -152,119 +205,31 @@ body {
   flex-direction: column;
 }
 
-/* Mobile-specific fixes for chat/message interfaces */
-@media (max-width: 768px) {
-  /* Remove any bottom spacing that creates the black box */
-  body {
-    padding-bottom: 0 !important;
-    margin-bottom: 0 !important;
-  }
-  
-  /* Ensure containers don't add extra bottom space */
-  .mobile-container,
-  [class*="container"] {
-    padding-bottom: env(safe-area-inset-bottom) !important;
-  }
-  
-  /* Fix for fixed position elements at bottom (like message input) */
-  [style*="position: fixed"][style*="bottom"] {
-    bottom: env(safe-area-inset-bottom) !important;
-  }
-}
+/* Scrollbars — minimal, iOS-style */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground) / 0.25); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.4); }
 
-/* Utility classes for mobile-optimized layouts */
-.mobile-h-screen {
-  height: 100vh;
-  height: -webkit-fill-available;
-  height: 100dvh;
-}
-
-.mobile-min-h-screen {
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
-  min-height: 100dvh;
-}
-
-/* Remove bottom safe area for elements that should reach screen edge */
-.pb-safe-none {
-  padding-bottom: 0 !important;
-}
-
-/* Add minimal safe area for input fields */
-.input-safe-bottom {
-  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
-}
-
-/* Chat Container Styles - Production-Ready Scroll Behavior */
+/* Chat container (kept for existing chat pages) */
 .chat-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  height: -webkit-fill-available;
-  height: 100dvh;
+  display: flex; flex-direction: column;
+  height: 100vh; height: -webkit-fill-available; height: 100dvh;
   overflow: hidden;
 }
-
 .chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  max-height: 100%;
+  flex: 1; overflow-y: auto; overflow-x: hidden;
   scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+  -webkit-overflow-scrolling: touch;
   background-color: hsl(var(--background));
 }
-
 .chat-input {
-  position: sticky;
-  bottom: 0;
+  position: sticky; bottom: 0;
   background-color: hsl(var(--background));
   z-index: 10;
   border-top: 1px solid hsl(var(--border));
 }
 
-/* Smooth scrollbar for chat (webkit browsers) */
-.chat-messages::-webkit-scrollbar {
-  width: 6px;
-}
-
-.chat-messages::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 3px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
-}
-
-/* Ensure proper scroll behavior on all platforms */
-@supports (-webkit-touch-callout: none) {
-  /* iOS-specific fixes */
-  .chat-container {
-    height: -webkit-fill-available;
-  }
-  
-  .chat-messages {
-    -webkit-overflow-scrolling: touch;
-    position: relative;
-  }
-}
-
-/* Loading skeleton animation */
-@keyframes pulse {
-  0%, 100% { 
-    opacity: 1; 
-  }
-  50% { 
-    opacity: 0.4; 
-  }
-}
-
-/* Desktop Chat Container Utility - Critical for Web Scroll Fix */
 @media screen and (min-width: 1025px) {
   .desktop-chat-container {
     height: calc(100vh - 280px);
@@ -273,6 +238,3 @@ body {
     overflow: hidden;
   }
 }
-
-/* Alternative: Use this class on TripTabs tab content wrapper */
-/* Already applied via inline Tailwind in TripTabs.tsx */
