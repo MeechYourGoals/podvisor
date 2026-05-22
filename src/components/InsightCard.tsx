@@ -5,6 +5,7 @@ import { Bookmark, Copy, CheckCircle2, Lightbulb, Check } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { BookmarkDialog } from './BookmarkDialog';
+import { cn } from '@/lib/utils';
 
 interface InsightCardProps {
   insight: {
@@ -28,130 +29,79 @@ const InsightCard = ({ insight, onBookmark, isBookmarked, actionItems, index, is
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const handleBookmark = () => {
-    setBookmarkDialogOpen(true);
-  };
-
   const handleCopy = async () => {
     await navigator.clipboard.writeText(insight.insight_text);
     setCopied(true);
-    toast({
-      title: "Copied!",
-      description: "Insight copied to clipboard",
-    });
+    toast({ title: 'Copied', description: 'Insight copied to clipboard.' });
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      strategy: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-      execution: 'bg-green-500/10 text-green-500 border-green-500/20',
-      mindset: 'bg-red-500/10 text-red-500 border-red-500/20',
-      technical: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-      nutrition: 'bg-pink-500/10 text-pink-500 border-pink-500/20',
-      training: 'bg-red-500/10 text-red-500 border-red-500/20',
-    };
-    return colors[category.toLowerCase()] || 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-  };
-
   return (
-    <Card className={`hover:shadow-md transition-shadow ${isPersonalized ? 'border-l-4 border-l-green-500' : ''}`}>
-      <CardContent className="pt-6 space-y-4">
-        {/* Header: Index + Category + Actions */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-3">
+    <Card
+      className={cn(
+        'transition-colors',
+        isPersonalized && 'border-l-2 border-l-primary',
+      )}
+    >
+      <CardContent className="p-5 space-y-3">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             {index !== undefined && !isPersonalized && (
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-bold text-primary">#{index + 1}</span>
-              </div>
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground">
+                {index + 1}
+              </span>
             )}
-            {isPersonalized && (
-              <Lightbulb className="h-5 w-5 text-green-500 flex-shrink-0" />
-            )}
-            <Badge variant="outline" className={getCategoryColor(insight.category)}>
+            {isPersonalized && <Lightbulb className="h-4 w-4 text-primary shrink-0" />}
+            <Badge variant="outline" className="text-[11px] uppercase tracking-wide font-medium border-border text-muted-foreground">
               {insight.category}
             </Badge>
           </div>
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleCopy}
-              className="h-8 w-8 p-0"
-            >
-              {copied ? (
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
+          <div className="flex gap-0.5 shrink-0">
+            <Button size="icon" variant="ghost" onClick={handleCopy} className="h-8 w-8" aria-label="Copy">
+              {copied ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleBookmark}
-              className="h-8 w-8 p-0"
-            >
-              <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-current' : ''}`} />
+            <Button size="icon" variant="ghost" onClick={() => setBookmarkDialogOpen(true)} className="h-8 w-8" aria-label="Bookmark">
+              <Bookmark className={cn('h-4 w-4', isBookmarked && 'fill-current text-primary')} />
             </Button>
           </div>
         </div>
 
-        {/* Profile Context (for personalized insights) */}
         {insight.for_profile_context && (
-          <div className="text-sm font-medium text-green-600 dark:text-green-400">
-            {insight.for_profile_context}
-          </div>
+          <p className="text-caption font-medium text-primary">{insight.for_profile_context}</p>
         )}
 
-        {/* Insight Text */}
-        <p className="text-sm leading-relaxed text-foreground">
-          {insight.insight_text}
-        </p>
+        <p className="text-[15px] leading-relaxed text-foreground">{insight.insight_text}</p>
 
-        {/* Expert Attribution */}
         {insight.expert_attribution && (
-          <p className="text-sm italic text-muted-foreground">
-            — {insight.expert_attribution}
-          </p>
+          <p className="text-footnote italic text-muted-foreground">— {insight.expert_attribution}</p>
         )}
 
-        {/* Scores as Pills */}
-        <div className="flex gap-2 flex-wrap">
+        {/* Scores */}
+        <div className="flex gap-3 pt-1 text-caption text-muted-foreground">
           {insight.impact_score !== undefined && (
-            <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
-              Impact: {insight.impact_score}/10
-            </Badge>
+            <span><span className="font-medium text-foreground/70">Impact</span> · {insight.impact_score}/10</span>
           )}
           {insight.actionability_score !== undefined && (
-            <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
-              Actionability: {insight.actionability_score}/10
-            </Badge>
+            <span><span className="font-medium text-foreground/70">Action</span> · {insight.actionability_score}/10</span>
           )}
         </div>
 
-        {/* Action Items */}
         {actionItems && actionItems.length > 0 && (
-          <div className="pt-3 border-t space-y-2">
-            <p className="text-sm font-semibold text-green-600 dark:text-green-400 flex items-center gap-2">
-              <Check className="h-4 w-4" />
-              Action Items:
+          <div className="pt-3 border-t border-border space-y-1.5">
+            <p className="text-caption font-semibold text-primary flex items-center gap-1.5">
+              <Check className="h-3 w-3" />
+              Action items
             </p>
-            <ol className="space-y-2 list-decimal list-inside">
+            <ol className="space-y-1 list-decimal list-inside text-[14px]">
               {actionItems.map((item, idx) => (
-                <li key={idx} className="text-sm leading-relaxed">
-                  {item.replace(/^\d+\.\s*/, '')}
-                </li>
+                <li key={idx} className="leading-relaxed">{item.replace(/^\d+\.\s*/, '')}</li>
               ))}
             </ol>
           </div>
         )}
 
-        <BookmarkDialog
-          open={bookmarkDialogOpen}
-          onOpenChange={setBookmarkDialogOpen}
-          insightId={insight.id}
-          type="insight"
-        />
+        <BookmarkDialog open={bookmarkDialogOpen} onOpenChange={setBookmarkDialogOpen} insightId={insight.id} type="insight" />
       </CardContent>
     </Card>
   );
