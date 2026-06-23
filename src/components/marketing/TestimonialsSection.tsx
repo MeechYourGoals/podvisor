@@ -7,10 +7,10 @@ export const TestimonialsSection = () => {
     <section className="py-12 border-t border-border">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-display font-bold mb-3">
+          <h2 className="text-6xl font-display font-bold mb-3">
             How Professionals Use Podvisor
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-2xl text-muted-foreground">
             Real insights from real users
           </p>
         </div>
@@ -31,16 +31,16 @@ export const TestimonialsSection = () => {
                     <Star key={i} className="h-4 w-4 fill-primary text-primary" />
                   ))}
                 </div>
-                <p className="text-lg leading-relaxed">
+                <p className="text-3xl leading-relaxed">
                   "As a CEO juggling a newborn and my boxing hobby, I analyze business podcasts, 
                   parenting expert videos, and training tutorials - all through my three different 
                   contexts. It's like having three different advisors in one tool. Absolute game 
                   changer for time management."
                 </p>
                 <div className="flex items-center gap-2 pt-2">
-                  <p className="font-semibold">Maya Rodriguez</p>
+                  <p className="font-semibold text-2xl">Maya Rodriguez</p>
                   <span className="text-muted-foreground">•</span>
-                  <p className="text-sm text-muted-foreground">CEO & New Mom</p>
+                  <p className="text-xl text-muted-foreground">CEO & New Mom</p>
                 </div>
               </div>
             </div>
